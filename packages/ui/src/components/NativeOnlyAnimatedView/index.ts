@@ -1,0 +1,2 @@
+export { NativeOnlyAnimatedView } from './NativeOnlyAnimatedView';
+
