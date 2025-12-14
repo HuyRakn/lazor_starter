@@ -5,8 +5,20 @@ import * as DialogPrimitive from '@rn-primitives/dialog';
 import { X } from 'lucide-react-native';
 import * as React from 'react';
 import { Platform, Text, View, type ViewProps } from 'react-native';
-import { FadeIn, FadeOut } from 'react-native-reanimated';
 import { FullWindowOverlay as RNFullWindowOverlay } from 'react-native-screens';
+
+// Try to import reanimated animations, fallback to undefined if not available
+let FadeIn: any;
+let FadeOut: any;
+try {
+  const reanimated = require('react-native-reanimated');
+  FadeIn = reanimated.FadeIn;
+  FadeOut = reanimated.FadeOut;
+} catch (e) {
+  // Reanimated not available, animations will be ignored
+  FadeIn = undefined;
+  FadeOut = undefined;
+}
 
 const Dialog = DialogPrimitive.Root;
 

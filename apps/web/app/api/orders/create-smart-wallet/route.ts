@@ -19,37 +19,12 @@ if (typeof process !== 'undefined') {
   }
 }
 
-// Import SDK package - prefer backend server API when available
-// Following RampFi pattern: try backend modules first, then fallback to main package
+// Import SDK package - load main package directly
 // Lazy load to avoid localStorage errors in Next.js API routes
 function loadLazorkitWallet(): any {
-  let LazorkitWalletBackend: any = null;
-  const backendCandidates = [
-    '@lazorkit/wallet/backend',
-    '@lazorkit/wallet/server',
-    '@lazorkit/wallet/dist/backend',
-    '@lazorkit/wallet/dist/server',
-  ];
-
-  // Try to load backend module synchronously (works in Next.js API routes)
-  for (const mod of backendCandidates) {
-    if (LazorkitWalletBackend) break;
-    try {
-      // Use require for CommonJS modules (works in Next.js API routes)
-      const loaded = require(mod);
-      if (loaded) {
-        LazorkitWalletBackend = loaded;
-        console.log('✅ Loaded Lazorkit backend from:', mod);
-        break;
-      }
-    } catch (_) {
-      // ignore; try next candidate
-    }
-  }
-
-  // Fallback to main package (same as RampFi)
   try {
-    const LazorkitWallet = LazorkitWalletBackend || require('@lazorkit/wallet');
+    // Use require for CommonJS modules (works in Next.js API routes)
+    const LazorkitWallet = require('@lazorkit/wallet');
     console.log('✅ Loaded Lazorkit SDK:', {
       hasLazorKit: !!LazorkitWallet?.LazorKit,
       hasDefault: !!LazorkitWallet?.default?.LazorKit,
@@ -255,7 +230,9 @@ function normalizePasskeyData(raw: any): any {
 
 export async function POST(request: NextRequest) {
   try {
-    const { passkeyData } = await request.json();
+    // Read request body once
+    const requestBody = await request.json();
+    const { passkeyData, userPrivateKey } = requestBody;
 
     if (!passkeyData) {
       return NextResponse.json({ error: 'Missing passkeyData' }, { status: 400 });
@@ -298,26 +275,34 @@ export async function POST(request: NextRequest) {
     
     const connection = new Connection(rpcUrl, 'confirmed');
 
-    // Admin signer
-    // CRITICAL: PRIVATE_KEY must be in apps/web/.env.local
-    // Next.js only loads .env.local from the app directory, not from root
-    const adminSecret = process.env.PRIVATE_KEY;
+    // Admin signer - Use user's private key from request, fallback to env
+    const adminSecret = userPrivateKey || process.env.PRIVATE_KEY;
+    
     if (!adminSecret) {
-      console.error('❌ PRIVATE_KEY missing. Debug:', {
-        hasRpcUrl: !!process.env.RPC_URL,
-        hasLazorkitRpc: !!process.env.LAZORKIT_RPC_URL,
-        cwd: process.cwd(),
-        nodeEnv: process.env.NODE_ENV,
-      });
+      console.error('❌ PRIVATE_KEY missing. User must provide private key for testing.');
       return NextResponse.json(
         { 
-          error: 'Missing PRIVATE_KEY for admin signer',
-          hint: 'Make sure .env.local exists in apps/web/ directory with PRIVATE_KEY. Next.js only loads .env.local from the app directory.'
+          error: 'Missing PRIVATE_KEY for wallet creation',
+          hint: 'Please provide your private key in the login form. This is required for testing smart wallet creation on devnet.',
+          requiresPrivateKey: true,
         },
-        { status: 500 }
+        { status: 400 }
       );
     }
-    const adminKeypair = Keypair.fromSecretKey(bs58.decode(adminSecret));
+    
+    let adminKeypair: Keypair;
+    try {
+      adminKeypair = Keypair.fromSecretKey(bs58.decode(adminSecret));
+    } catch (error) {
+      console.error('❌ Invalid PRIVATE_KEY format:', error);
+      return NextResponse.json(
+        { 
+          error: 'Invalid PRIVATE_KEY format',
+          hint: 'Private key must be a valid base58 encoded Solana private key.',
+        },
+        { status: 400 }
+      );
+    }
 
     // Normalize and extract required fields
     const normalized = normalizePasskeyData(passkeyData);

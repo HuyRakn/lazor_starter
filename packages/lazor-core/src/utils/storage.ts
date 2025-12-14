@@ -1,8 +1,3 @@
-/**
- * Universal Storage Utility
- * Works for both Web (localStorage) and Mobile (AsyncStorage)
- */
-
 export interface StorageInterface {
   getItem(key: string): Promise<string | null> | string | null;
   setItem(key: string, value: string): Promise<void> | void;
@@ -11,12 +6,20 @@ export interface StorageInterface {
 
 let storageInstance: StorageInterface | null = null;
 
+/**
+ * Gets the storage instance for the current platform
+ *
+ * Shared utility for monorepo (Web & Mobile).
+ * Automatically detects Web (localStorage) or Mobile (AsyncStorage) environment.
+ * Returns null if storage is not available.
+ *
+ * @returns Storage interface instance or null
+ */
 export function getStorage(): StorageInterface | null {
   if (storageInstance) {
     return storageInstance;
   }
 
-  // Web: Use localStorage (synchronous)
   if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
     storageInstance = {
       getItem: (key: string) => localStorage.getItem(key),
@@ -30,9 +33,6 @@ export function getStorage(): StorageInterface | null {
     return storageInstance;
   }
 
-  // Mobile: Use AsyncStorage (asynchronous)
-  // We'll set this up in the mobile app initialization
-  // For now, return a no-op storage
   storageInstance = {
     getItem: async () => null,
     setItem: async () => {},
@@ -43,7 +43,14 @@ export function getStorage(): StorageInterface | null {
 }
 
 /**
- * Initialize storage for Mobile (call this in mobile app entry point)
+ * Initialize storage for Mobile platform using AsyncStorage
+ *
+ * Shared utility for monorepo mobile apps.
+ * Call this function in the mobile app entry point to enable
+ * persistent storage on React Native.
+ *
+ * @param AsyncStorage - AsyncStorage instance from @react-native-async-storage/async-storage
+ * @returns void - Function does not return a value
  */
 export function initMobileStorage(AsyncStorage: any) {
   if (typeof window === 'undefined' || !AsyncStorage) {
@@ -54,23 +61,23 @@ export function initMobileStorage(AsyncStorage: any) {
     getItem: async (key: string) => {
       try {
         return await AsyncStorage.getItem(key);
-      } catch (e) {
-        console.error('AsyncStorage.getItem error:', e);
+      } catch (error) {
+        console.error('AsyncStorage.getItem error:', error);
         return null;
       }
     },
     setItem: async (key: string, value: string) => {
       try {
         await AsyncStorage.setItem(key, value);
-      } catch (e) {
-        console.error('AsyncStorage.setItem error:', e);
+      } catch (error) {
+        console.error('AsyncStorage.setItem error:', error);
       }
     },
     removeItem: async (key: string) => {
       try {
         await AsyncStorage.removeItem(key);
-      } catch (e) {
-        console.error('AsyncStorage.removeItem error:', e);
+      } catch (error) {
+        console.error('AsyncStorage.removeItem error:', error);
       }
     },
   };

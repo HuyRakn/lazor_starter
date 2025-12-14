@@ -22,6 +22,41 @@ export default function RootLayout({
                 if (typeof window !== 'undefined' && !window.global) { 
                   window.global = window; 
                 }
+                
+                // Suppress retry delay console logs
+                const originalError = console.error;
+                const originalWarn = console.warn;
+                const originalLog = console.log;
+                
+                console.error = function(...args) {
+                  const message = args.join(' ');
+                  if (message.includes('Retrying after') || 
+                      message.includes('delay') && message.includes('ms') ||
+                      message.includes('Server responded with 429')) {
+                    return;
+                  }
+                  originalError.apply(console, args);
+                };
+                
+                console.warn = function(...args) {
+                  const message = args.join(' ');
+                  if (message.includes('Retrying after') || 
+                      message.includes('delay') && message.includes('ms') ||
+                      message.includes('Server responded with 429')) {
+                    return;
+                  }
+                  originalWarn.apply(console, args);
+                };
+                
+                console.log = function(...args) {
+                  const message = args.join(' ');
+                  if (message.includes('Retrying after') || 
+                      message.includes('delay') && message.includes('ms') ||
+                      message.includes('Server responded with 429')) {
+                    return;
+                  }
+                  originalLog.apply(console, args);
+                };
               })();
             `,
           }}

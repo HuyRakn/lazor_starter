@@ -18,10 +18,6 @@ dist/
 *.seed
 *.pid.lock
 
-# Misc
-.DS_Store
-*.pem
-
 # Debug
 npm-debug.log*
 yarn-debug.log*
@@ -44,7 +40,6 @@ pnpm-debug.log*
 *.jks
 *.p8
 *.p12
-*.key
 *.mobileprovision
 *.orig.*
 web-build/
@@ -55,7 +50,46 @@ web-build/
 *.swp
 *.swo
 *~
+*.code-workspace
 
 # OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
 Thumbs.db
+ehthumbs.db
+Desktop.ini
 
+# TypeScript
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# SSL/TLS Certificates
+.cert/
+*.pem
+*.key
+*.crt
+
+# Package manager locks (keep pnpm-lock.yaml for reproducible builds)
+# pnpm-lock.yaml
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Coverage and testing
+.nyc_output/
+.coverage/
+
+# Solana/Blockchain specific
+*.keypair
+*.json.key
+wallet.json
+
+# Build artifacts
+*.map
+*.min.js
+*.min.css

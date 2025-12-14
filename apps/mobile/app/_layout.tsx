@@ -8,6 +8,11 @@ import * as Linking from 'expo-linking';
 import { useEffect, useState } from 'react';
 import { PortalWebView } from '../src/components/PortalWebView';
 import { webViewManager } from '../src/utils/webViewManager';
+import { useMobilePasskey } from '../src/hooks/useMobilePasskey';
+
+// Export mobile passkey hook factory to global so useLazorAuth can access it
+// This allows useLazorAuth to call the hook when needed
+(global as any).__useMobilePasskeyHook = useMobilePasskey;
 
 // CRITICAL: Initialize AsyncStorage for localStorage polyfill
 // This must be done before any other code that uses localStorage

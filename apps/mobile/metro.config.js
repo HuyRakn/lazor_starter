@@ -22,6 +22,15 @@ if (Array.isArray(existingBlockList)) {
   blockList = [existingBlockList];
 }
 
+// Use custom transformer to fix @lazorkit/wallet imports
+config.transformer = {
+  ...config.transformer,
+  babelTransformerPath: require.resolve('./metro-transformer.js'),
+};
+
+// Store default resolver
+const defaultResolver = config.resolver;
+
 config.resolver = {
   ...config.resolver,
   blockList: [
@@ -38,6 +47,38 @@ config.resolver = {
     path.resolve(__dirname, 'node_modules'),
     path.resolve(__dirname, '../../node_modules'),
   ],
+  // Custom resolver to handle missing modules
+  resolveRequest: (context, moduleName, platform) => {
+    // Handle relative imports to missing LazorkitProvider from @lazorkit/wallet
+    if (moduleName && (
+      moduleName.includes('react/LazorkitProvider') ||
+      moduleName.endsWith('/LazorkitProvider') ||
+      (moduleName === './react/LazorkitProvider' && context.originModulePath?.includes('@lazorkit/wallet'))
+    )) {
+      // Return a path to our stub file
+      const stubPath = path.resolve(__dirname, 'metro-stubs/LazorkitProvider.js');
+      return {
+        type: 'sourceFile',
+        filePath: stubPath,
+      };
+    }
+    
+    // Handle crypto module (required by @solana/kora and other packages)
+    if (moduleName === 'crypto') {
+      const cryptoStubPath = path.resolve(__dirname, 'metro-stubs/crypto.js');
+      return {
+        type: 'sourceFile',
+        filePath: cryptoStubPath,
+      };
+    }
+    
+    // Use default resolver for other modules
+    if (defaultResolver?.resolveRequest) {
+      return defaultResolver.resolveRequest(context, moduleName, platform);
+    }
+    // Fallback to default resolution
+    return context.resolveRequest(context, moduleName, platform);
+  },
 };
 
 // Also filter watchFolders to exclude .next directories

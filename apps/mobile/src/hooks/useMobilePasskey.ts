@@ -63,7 +63,12 @@ export function useMobilePasskey() {
     }
   }, []);
 
-  // Create passkey using native biometric authentication
+  /**
+   * Creates a passkey using native biometric authentication
+   * 
+   * @returns Promise resolving to passkey data
+   * @throws Error if biometric authentication is not available or user cancels
+   */
   const createPasskey = useCallback(async (): Promise<PasskeyData> => {
     try {
       // Check availability first
@@ -93,10 +98,6 @@ export function useMobilePasskey() {
         credentialId,
         userId,
         publicKey,
-        // Add other required fields
-        rpId: 'lazor.sh',
-        userDisplayName: 'User',
-        userHandle: userId,
       };
 
       console.log('✅ Mobile passkey created successfully');
@@ -107,7 +108,12 @@ export function useMobilePasskey() {
     }
   }, [checkAvailability]);
 
-  // Authenticate with existing passkey
+  /**
+   * Authenticates with an existing passkey using biometric authentication
+   * 
+   * @returns Promise resolving to stored passkey data
+   * @throws Error if biometric authentication fails or no passkey data is found
+   */
   const authenticatePasskey = useCallback(async (): Promise<PasskeyData> => {
     try {
       const available = await checkAvailability();
@@ -133,14 +139,14 @@ export function useMobilePasskey() {
         throw new Error('Storage not available');
       }
 
-      const passkeyDataStr = await Promise.resolve(
+      const passkeyDataString = await Promise.resolve(
         storage.getItem('lazorkit-passkey-data')
       );
-      if (!passkeyDataStr) {
+      if (!passkeyDataString) {
         throw new Error('No passkey data found. Please create a new wallet.');
       }
 
-      const passkeyData = JSON.parse(passkeyDataStr) as PasskeyData;
+      const passkeyData = JSON.parse(passkeyDataString) as PasskeyData;
       console.log('✅ Mobile passkey authenticated successfully');
       return passkeyData;
     } catch (error: any) {

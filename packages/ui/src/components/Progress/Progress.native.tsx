@@ -1,13 +1,35 @@
 import { cn } from '../../utils';
 import * as ProgressPrimitive from '@rn-primitives/progress';
 import { Platform, View } from 'react-native';
-import Animated, {
-  Extrapolation,
-  interpolate,
-  useAnimatedStyle,
-  useDerivedValue,
-  withSpring,
-} from 'react-native-reanimated';
+
+// Try to import reanimated, fallback to regular View if not available
+let Animated: any;
+let useAnimatedStyle: any;
+let useDerivedValue: any;
+let withSpring: any;
+let interpolate: any;
+let Extrapolation: any;
+let reanimatedAvailable = false;
+
+try {
+  const reanimated = require('react-native-reanimated');
+  Animated = reanimated.default || reanimated;
+  useAnimatedStyle = reanimated.useAnimatedStyle;
+  useDerivedValue = reanimated.useDerivedValue;
+  withSpring = reanimated.withSpring;
+  interpolate = reanimated.interpolate;
+  Extrapolation = reanimated.Extrapolation;
+  reanimatedAvailable = true;
+} catch (e) {
+  // Reanimated not available, use fallbacks
+  console.warn('react-native-reanimated not available in Progress, using fallback');
+  Animated = { View };
+  useAnimatedStyle = () => ({});
+  useDerivedValue = (fn: any) => ({ value: fn() });
+  withSpring = (value: any) => value;
+  interpolate = (value: any, input: any, output: any) => output[0];
+  Extrapolation = { CLAMP: 'clamp' };
+}
 
 function Progress({
   className,
@@ -55,6 +77,22 @@ function WebIndicator({ value, className }: IndicatorProps) {
 }
 
 function NativeIndicator({ value, className }: IndicatorProps) {
+  if (Platform.OS === 'web') {
+    return null;
+  }
+
+  // If reanimated is not available, use simple style
+  if (!reanimatedAvailable) {
+    return (
+      <ProgressPrimitive.Indicator asChild>
+        <View 
+          style={{ width: `${value ?? 0}%` }} 
+          className={cn('bg-foreground h-full', className)} 
+        />
+      </ProgressPrimitive.Indicator>
+    );
+  }
+
   const progress = useDerivedValue(() => value ?? 0);
 
   const indicator = useAnimatedStyle(() => {
@@ -65,10 +103,6 @@ function NativeIndicator({ value, className }: IndicatorProps) {
       ),
     };
   }, [value]);
-
-  if (Platform.OS === 'web') {
-    return null;
-  }
 
   return (
     <ProgressPrimitive.Indicator asChild>

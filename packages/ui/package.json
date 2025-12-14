@@ -17,6 +17,7 @@
     "@radix-ui/react-separator": "^1.1.0",
     "@radix-ui/react-slot": "^1.1.0",
     "@radix-ui/react-switch": "^1.1.1",
+    "@radix-ui/react-tabs": "^1.1.13",
     "@rn-primitives/avatar": "^1.0.0",
     "@rn-primitives/checkbox": "^1.0.0",
     "@rn-primitives/dialog": "^1.0.0",
@@ -27,20 +28,21 @@
     "@rn-primitives/toggle": "^1.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "lucide-react-native": "^0.468.0",
+    "lucide-react-native": "^0.469.0",
+    "motion": "^12.23.25",
     "nativewind": "^4.0.0",
     "react-native-reanimated": "^3.16.1",
     "react-native-screens": "^4.16.0",
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
-    "@types/react": "^19.1.0",
+    "@types/react": "^19.2.7",
     "@types/react-native": "^0.73.0",
     "typescript": "^5.0.0"
   },
   "peerDependencies": {
+    "@lazor-starter/core": "*",
     "react": "^18.3.1 || ^19.0.0",
-    "react-native": "^0.76.0"
+    "react-native": "^0.81.0"
   }
 }
-

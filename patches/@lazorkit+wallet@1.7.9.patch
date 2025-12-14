@@ -1,0 +1,16 @@
+diff --git a/node_modules/@lazorkit/wallet/core/contract/index.ts b/node_modules/@lazorkit/wallet/core/contract/index.ts
+index 5b8d9c0..0f8f5b2 100644
+--- a/node_modules/@lazorkit/wallet/core/contract/index.ts
++++ b/node_modules/@lazorkit/wallet/core/contract/index.ts
+@@
+-export { 
+-  DefaultPolicyClient,
+-  BuildInitPolicyIxParams,
+-  BuildCheckPolicyIxParams,
+-} from './client/defaultPolicy';
++// BuildInitPolicyIxParams and BuildCheckPolicyIxParams are TS-only interfaces.
++// Removing from runtime re-exports to avoid bundler warnings about missing exports.
++export { 
++  DefaultPolicyClient,
++} from './client/defaultPolicy';
+

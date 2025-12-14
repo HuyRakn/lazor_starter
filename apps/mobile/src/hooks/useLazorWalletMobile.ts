@@ -9,6 +9,17 @@ import { useMobilePasskey } from './useMobilePasskey';
 import { Platform } from 'react-native';
 import type { PasskeyData } from '@lazor-starter/core';
 
+/**
+ * Mobile-specific wallet hook that uses native passkey APIs
+ * 
+ * Automatically uses native biometric authentication on mobile devices
+ * instead of the portal WebView flow.
+ * 
+ * @returns Lazorkit wallet SDK instance with mobile-native passkey support
+ * @returns {Function} createPasskeyOnly - Create passkey using native Face ID / Touch ID
+ * @returns {Function} createSmartWallet - Create smart wallet
+ * @returns {Function} connectPasskey - Alias for createPasskeyOnly
+ */
 export function useLazorWalletMobile(): any {
   const sdk = useLazorWalletSDK();
   const { createPasskey, isAvailable } = useMobilePasskey();

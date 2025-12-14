@@ -67,3 +67,23 @@ export { Icon } from './Icon';
 // NativeOnlyAnimatedView
 export { NativeOnlyAnimatedView } from './NativeOnlyAnimatedView';
 
+// LazorPayButton
+export { LazorPayButton } from './LazorPayButton';
+export type { LazorPayButtonProps } from './LazorPayButton';
+
+// ExpandableCard
+export { ExpandableCard, useOutsideClick, CloseIcon } from './ExpandableCard';
+export type { ExpandableCardProps, ExpandableCardItem } from './ExpandableCard';
+
+// ThreeDMarquee
+export { ThreeDMarquee } from './ThreeDMarquee';
+export type { ThreeDMarqueeProps } from './ThreeDMarquee';
+
+// Tabs
+export { Tabs } from './Tabs';
+export type { TabsProps, TabItem } from './Tabs';
+
+// WalletBanner
+export { WalletBanner } from './WalletBanner';
+export type { WalletBannerProps } from './WalletBanner';
+

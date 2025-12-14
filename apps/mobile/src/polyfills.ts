@@ -4,6 +4,7 @@
 import 'react-native-get-random-values';
 import 'text-encoding-polyfill';
 import { Readable } from 'readable-stream';
+import * as Crypto from 'expo-crypto';
 
 // Try to use buffer package first (pure JS, no native bindings)
 // Fallback to react-native-buffer if buffer package fails
@@ -169,12 +170,55 @@ if (typeof (global as any).global === 'undefined') {
   (global as any).global = global;
 }
 
+// CRITICAL: Polyfill for Event class (required by @wallet-standard/wallet)
+// React Native doesn't have Event constructor, so we need to create one
+if (typeof (global as any).Event === 'undefined') {
+  class EventPolyfill {
+    type: string;
+    bubbles: boolean;
+    cancelable: boolean;
+    defaultPrevented: boolean;
+    timeStamp: number;
+    target: any;
+    currentTarget: any;
+    detail: any;
+
+    constructor(type: string, eventInitDict?: { bubbles?: boolean; cancelable?: boolean; detail?: any }) {
+      this.type = type;
+      this.bubbles = eventInitDict?.bubbles ?? false;
+      this.cancelable = eventInitDict?.cancelable ?? false;
+      this.defaultPrevented = false;
+      this.timeStamp = Date.now();
+      this.target = null;
+      this.currentTarget = null;
+      this.detail = eventInitDict?.detail ?? null;
+    }
+
+    preventDefault() {
+      if (this.cancelable) {
+        this.defaultPrevented = true;
+      }
+    }
+
+    stopPropagation() {
+      // No-op in React Native
+    }
+
+    stopImmediatePropagation() {
+      // No-op in React Native
+    }
+  }
+
+  (global as any).Event = EventPolyfill;
+}
+
 // CRITICAL: Polyfill for window object (required by @lazorkit/wallet)
 // This creates a minimal window object with addEventListener
 // Must be defined BEFORE any modules try to access it
 const eventListeners: Map<string, Set<Function>> = new Map();
 
-const windowPolyfill = {
+const windowPolyfill: any = {
+  Event: (global as any).Event,
   addEventListener: (event: string, handler: Function) => {
     if (!eventListeners.has(event)) {
       eventListeners.set(event, new Set());
@@ -199,9 +243,24 @@ const windowPolyfill = {
   },
   // window.open polyfill for mobile using WebView
   // This opens URLs in a WebView modal and handles postMessage communication
+  // BUT: Block portal URLs when using native passkey
   open: (url?: string, target?: string, features?: string) => {
     if (!url) {
       return null;
+    }
+
+    // Check if this is a portal URL and we're using native passkey
+    const isPortalUrl = url.includes('portal.lazor.sh') || url.includes('lazor.sh');
+    const usingNativePasskey = !!(global as any).__USING_NATIVE_PASSKEY__;
+    
+    if (isPortalUrl && usingNativePasskey) {
+      console.log('🚫 Blocking portal URL (using native passkey):', url);
+      // Return a mock window object that won't actually open
+      return {
+        closed: false,
+        close: () => {},
+        postMessage: () => {},
+      } as any;
     }
 
     console.log('🔄 window.open called on mobile, opening WebView:', url);
@@ -339,5 +398,39 @@ const localStoragePolyfill = {
 // Assign to global.localStorage
 (global as any).localStorage = localStoragePolyfill;
 
-console.log('✅ Polyfills loaded (including window and localStorage)');
+// CRITICAL: Polyfill for crypto module (required by @solana/kora and other packages)
+// Use expo-crypto for React Native compatibility
+if (typeof (global as any).crypto === 'undefined') {
+  (global as any).crypto = {
+    getRandomValues: (array: Uint8Array) => {
+      // Use expo-crypto for random values
+      const randomBytes = Crypto.getRandomBytes(array.length);
+      array.set(randomBytes);
+      return array;
+    },
+    randomUUID: () => {
+      // Generate UUID using expo-crypto
+      return Crypto.randomUUID();
+    },
+    subtle: {
+      // Minimal subtle crypto implementation
+      // Most Solana libraries don't need this, but some might
+      digest: async (algorithm: string, data: ArrayBuffer) => {
+        // Use expo-crypto for hashing
+        const hash = await Crypto.digestStringAsync(
+          Crypto.CryptoDigestAlgorithm.SHA256,
+          new Uint8Array(data).reduce((acc, byte) => acc + String.fromCharCode(byte), '')
+        );
+        // Convert hex string back to ArrayBuffer
+        const bytes = new Uint8Array(hash.length / 2);
+        for (let i = 0; i < hash.length; i += 2) {
+          bytes[i / 2] = parseInt(hash.substr(i, 2), 16);
+        }
+        return bytes.buffer;
+      },
+    },
+  };
+}
+
+console.log('✅ Polyfills loaded (including window, localStorage, and crypto)');
 

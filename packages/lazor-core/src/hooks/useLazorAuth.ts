@@ -13,6 +13,25 @@ const STORAGE_KEYS = {
   HAS_WALLET: 'lazorkit-has-wallet',
 };
 
+/**
+ * Main authentication hook for Lazorkit Passkey and Smart Wallet
+ *
+ * Shared hook for monorepo (Web & Mobile).
+ * Handles passkey creation, smart wallet registration, login, and logout.
+ * Automatically persists session state across page reloads.
+ *
+ * @returns {Object} Authentication state and methods
+ * @returns {boolean} returns.isLoggedIn - True if user has both passkey and wallet
+ * @returns {boolean} returns.hasPasskey - True if passkey exists
+ * @returns {boolean} returns.hasWallet - True if smart wallet is created
+ * @returns {string|undefined} returns.pubkey - Wallet public key address
+ * @returns {PasskeyData|undefined} returns.passkeyData - Passkey credential data
+ * @returns {boolean} returns.isInitialized - True when initial state is loaded
+ * @returns {() => Promise<PasskeyData>} returns.loginWithPasskey - Create/authenticate with passkey
+ * @returns {(passkeyData: PasskeyData) => Promise<string>} returns.createSmartWallet - Create smart wallet from passkey
+ * @returns {() => Promise<{passkeyData: PasskeyData, walletAddress: string}>} returns.registerNewWallet - Register new wallet (passkey + smart wallet)
+ * @returns {() => Promise<void>} returns.logout - Clear session and logout
+ */
 export function useLazorAuth() {
   const wallet = useLazorWallet();
   const [state, setState] = useState<WalletState>({
@@ -22,39 +41,47 @@ export function useLazorAuth() {
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
+    /**
+     * Initializes authentication state from persistent storage
+     *
+     * Loads passkey data, wallet address, and authentication state
+     * from localStorage (Web) or AsyncStorage (Mobile).
+     *
+     * @returns Promise that resolves when initialization is complete
+     */
     const initState = async () => {
-    const storage = getStorage();
-    if (!storage) {
+      const storage = getStorage();
+      if (!storage) {
         setIsInitialized(true);
         return;
-    }
-
-      try {
-        const hasPasskeyStr = await Promise.resolve(storage.getItem(STORAGE_KEYS.HAS_PASSKEY));
-        const hasWalletStr = await Promise.resolve(storage.getItem(STORAGE_KEYS.HAS_WALLET));
-        const pubkey = await Promise.resolve(storage.getItem(STORAGE_KEYS.WALLET_ADDRESS)) || undefined;
-        const smartWalletIdStr = await Promise.resolve(storage.getItem(STORAGE_KEYS.SMART_WALLET_ID)) || undefined;
-        const passkeyDataStr = await Promise.resolve(storage.getItem(STORAGE_KEYS.PASSKEY_DATA));
-        
-        const hasPasskey = hasPasskeyStr === 'true';
-        const hasWallet = hasWalletStr === 'true';
-    let passkeyData: PasskeyData | undefined;
-
-    if (passkeyDataStr) {
-      try {
-        passkeyData = JSON.parse(passkeyDataStr);
-        if (smartWalletIdStr && passkeyData) {
-          (passkeyData as any).smartWalletId = smartWalletIdStr;
-          (passkeyData as any).walletId = smartWalletIdStr;
-          (passkeyData as any).smartWalletID = smartWalletIdStr;
-        }
-      } catch (e) {
-        // Ignore parse errors
       }
-    }
+
+      try {
+        const hasPasskeyString = await Promise.resolve(storage.getItem(STORAGE_KEYS.HAS_PASSKEY));
+        const hasWalletString = await Promise.resolve(storage.getItem(STORAGE_KEYS.HAS_WALLET));
+        const pubkey = await Promise.resolve(storage.getItem(STORAGE_KEYS.WALLET_ADDRESS)) || undefined;
+        const smartWalletIdString = await Promise.resolve(storage.getItem(STORAGE_KEYS.SMART_WALLET_ID)) || undefined;
+        const passkeyDataString = await Promise.resolve(storage.getItem(STORAGE_KEYS.PASSKEY_DATA));
+        
+        const hasPasskey = hasPasskeyString === 'true';
+        const hasWallet = hasWalletString === 'true';
+        let passkeyData: PasskeyData | undefined;
+
+        if (passkeyDataString) {
+          try {
+            passkeyData = JSON.parse(passkeyDataString);
+            if (smartWalletIdString && passkeyData) {
+              (passkeyData as any).smartWalletId = smartWalletIdString;
+              (passkeyData as any).walletId = smartWalletIdString;
+              (passkeyData as any).smartWalletID = smartWalletIdString;
+            }
+          } catch (error) {
+            // Ignore parse errors
+          }
+        }
 
         setState({ hasPasskey, hasWallet, pubkey, passkeyData });
-      } catch (e) {
+      } catch (error) {
         // Ignore initialization errors
       } finally {
         setIsInitialized(true);
@@ -69,6 +96,14 @@ export function useLazorAuth() {
       return;
     }
 
+    /**
+     * Reconnects wallet if passkey data exists but wallet is not connected
+     *
+     * Automatically attempts to reconnect the wallet when passkey data
+     * is available but the wallet connection is lost.
+     *
+     * @returns Promise that resolves when reconnection attempt completes
+     */
     const reconnectWallet = async () => {
       if (!state.passkeyData) {
         return;
@@ -92,38 +127,44 @@ export function useLazorAuth() {
     }
   }, [isInitialized, state.passkeyData, wallet]);
 
+  /**
+   * Saves wallet state to persistent storage
+   *
+   * @param newState - Partial wallet state to save
+   * @returns Promise that resolves when save is complete
+   */
   const saveToStorage = useCallback(
     async (newState: Partial<WalletState>) => {
       const storage = getStorage();
       if (!storage) return;
 
       try {
-      if (newState.hasPasskey !== undefined) {
+        if (newState.hasPasskey !== undefined) {
           await Promise.resolve(storage.setItem(STORAGE_KEYS.HAS_PASSKEY, String(newState.hasPasskey)));
-      }
-      if (newState.hasWallet !== undefined) {
+        }
+        if (newState.hasWallet !== undefined) {
           await Promise.resolve(storage.setItem(STORAGE_KEYS.HAS_WALLET, String(newState.hasWallet)));
-      }
-      if (newState.pubkey !== undefined) {
-        if (newState.pubkey) {
+        }
+        if (newState.pubkey !== undefined) {
+          if (newState.pubkey) {
             await Promise.resolve(storage.setItem(STORAGE_KEYS.WALLET_ADDRESS, newState.pubkey));
-        } else {
+          } else {
             await Promise.resolve(storage.removeItem(STORAGE_KEYS.WALLET_ADDRESS));
+          }
         }
-        }
-        const passkeyDataAny = newState.passkeyData as any;
-        if (passkeyDataAny?.smartWalletId || passkeyDataAny?.walletId || passkeyDataAny?.smartWalletID) {
-          const smartWalletId = passkeyDataAny.smartWalletId || passkeyDataAny.walletId || passkeyDataAny.smartWalletID;
+        const passkeyDataTyped = newState.passkeyData as any;
+        if (passkeyDataTyped?.smartWalletId || passkeyDataTyped?.walletId || passkeyDataTyped?.smartWalletID) {
+          const smartWalletId = passkeyDataTyped.smartWalletId || passkeyDataTyped.walletId || passkeyDataTyped.smartWalletID;
           await Promise.resolve(storage.setItem(STORAGE_KEYS.SMART_WALLET_ID, String(smartWalletId)));
-      }
-      if (newState.passkeyData !== undefined) {
-        if (newState.passkeyData) {
+        }
+        if (newState.passkeyData !== undefined) {
+          if (newState.passkeyData) {
             await Promise.resolve(
-          storage.setItem(
-            STORAGE_KEYS.PASSKEY_DATA,
-            JSON.stringify(newState.passkeyData)
+              storage.setItem(
+                STORAGE_KEYS.PASSKEY_DATA,
+                JSON.stringify(newState.passkeyData)
               )
-          );
+            );
             const smartWalletId = (newState.passkeyData as any)?.smartWalletId || 
                                  (newState.passkeyData as any)?.walletId || 
                                  (newState.passkeyData as any)?.smartWalletID;
@@ -132,90 +173,137 @@ export function useLazorAuth() {
             } else {
               await Promise.resolve(storage.removeItem(STORAGE_KEYS.SMART_WALLET_ID));
             }
-        } else {
+          } else {
             await Promise.resolve(storage.removeItem(STORAGE_KEYS.PASSKEY_DATA));
             await Promise.resolve(storage.removeItem(STORAGE_KEYS.SMART_WALLET_ID));
+          }
         }
-        }
-      } catch (e) {
+      } catch (error) {
         // Ignore storage errors
       }
     },
     []
   );
 
+  /**
+   * Creates or authenticates with a passkey using Lazorkit SDK
+   *
+   * Falls back to wallet.connect() for SDK builds without createPasskeyOnly.
+   *
+   * @returns Promise resolving to passkey credential data
+   * @throws Error if passkey creation or authentication fails
+   */
   const loginWithPasskey = useCallback(async (): Promise<PasskeyData> => {
-    if (!wallet?.createPasskeyOnly) {
-      throw new Error(
-        'Passkey login not available. Make sure LazorProvider is set up correctly.'
-      );
-    }
-
     try {
-      const passkeyData = await wallet.createPasskeyOnly();
-      if (!passkeyData) {
-        throw new Error('Failed to login with passkey');
-      }
-
-      const storage = getStorage();
-      let smartWalletIdFromStorage: string | null = null;
-      if (storage) {
-        try {
-          smartWalletIdFromStorage = await Promise.resolve(storage.getItem(STORAGE_KEYS.SMART_WALLET_ID)) || null;
-        } catch (e) {
-          // Ignore storage read errors
+      if (wallet?.createPasskeyOnly) {
+        const passkeyData = await wallet.createPasskeyOnly();
+        if (!passkeyData) {
+          throw new Error('Failed to login with passkey');
         }
+
+        const storage = getStorage();
+        let storedWalletId: string | null = null;
+        if (storage) {
+          try {
+            storedWalletId =
+              (await Promise.resolve(storage.getItem(STORAGE_KEYS.SMART_WALLET_ID))) || null;
+          } catch (error) {
+            // Ignore storage read errors
+          }
+        }
+
+        const enrichedPasskeyData = storedWalletId
+          ? {
+              ...passkeyData,
+              smartWalletId: storedWalletId,
+              walletId: storedWalletId,
+              smartWalletID: storedWalletId,
+            }
+          : passkeyData;
+
+        const newState: WalletState = {
+          hasPasskey: true,
+          hasWallet: state.hasWallet,
+          pubkey: state.pubkey,
+          passkeyData: enrichedPasskeyData as PasskeyData,
+        };
+
+        setState(newState);
+        await saveToStorage(newState);
+
+        return enrichedPasskeyData as PasskeyData;
       }
 
-      const passkeyDataWithWalletId = smartWalletIdFromStorage
-        ? {
-            ...passkeyData,
-            smartWalletId: smartWalletIdFromStorage,
-            walletId: smartWalletIdFromStorage,
-            smartWalletID: smartWalletIdFromStorage,
-          }
-        : passkeyData;
+      if (!wallet?.connect) {
+        throw new Error('Passkey login not available. Make sure LazorProvider is set up correctly.');
+      }
+
+      const connectedWallet = await wallet.connect();
+      if (!connectedWallet?.smartWallet) {
+        throw new Error('Passkey login failed: missing smart wallet address');
+      }
+
+      const passkeyData: PasskeyData = {
+        credentialId: connectedWallet.credentialId || '',
+        userId: connectedWallet.walletDevice || 'web',
+        publicKey: {
+          x: '',
+          y: '',
+        },
+        smartWalletAddress: connectedWallet.smartWallet,
+        smartWalletId: connectedWallet.smartWallet,
+      };
 
       const newState: WalletState = {
         hasPasskey: true,
-        hasWallet: state.hasWallet,
-        pubkey: state.pubkey,
-        passkeyData: passkeyDataWithWalletId as PasskeyData,
+        hasWallet: true,
+        pubkey: connectedWallet.smartWallet,
+        passkeyData,
       };
 
       setState(newState);
       await saveToStorage(newState);
 
-      return passkeyDataWithWalletId as PasskeyData;
+      return passkeyData;
     } catch (error) {
       throw error;
     }
   }, [wallet, state.hasWallet, state.pubkey, saveToStorage]);
 
+  /**
+   * Creates a smart wallet on-chain using passkey data
+   *
+   * @param passkeyData - Passkey credential data from loginWithPasskey
+   * @returns Promise resolving to wallet public key address
+   * @throws Error if wallet creation fails or API call fails
+   */
   const createSmartWallet = useCallback(
     async (passkeyData: PasskeyData): Promise<string> => {
       if (!wallet?.createSmartWalletOnly && !wallet?.createSmartWallet) {
+        if (state.pubkey) {
+          return state.pubkey;
+        }
         throw new Error('Smart wallet creation not available');
       }
 
       try {
         const storage = getStorage();
-        let smartWalletIdFromStorage: string | null = null;
+        let storedWalletId: string | null = null;
         if (storage) {
           try {
-            smartWalletIdFromStorage = await Promise.resolve(storage.getItem(STORAGE_KEYS.SMART_WALLET_ID)) || null;
-          } catch (e) {
+            storedWalletId = await Promise.resolve(storage.getItem(STORAGE_KEYS.SMART_WALLET_ID)) || null;
+          } catch (error) {
             // Ignore storage read errors
           }
         }
 
-        const passkeyDataAny = passkeyData as any;
-        const passkeyDataWithWalletId = smartWalletIdFromStorage
+        const passkeyDataTyped = passkeyData as any;
+        const enrichedPasskeyData = storedWalletId
           ? {
               ...passkeyData,
-              smartWalletId: smartWalletIdFromStorage,
-              walletId: smartWalletIdFromStorage,
-              smartWalletID: smartWalletIdFromStorage,
+              smartWalletId: storedWalletId,
+              walletId: storedWalletId,
+              smartWalletID: storedWalletId,
             }
           : passkeyData;
 
@@ -242,31 +330,33 @@ export function useLazorAuth() {
 
         const apiUrl = `${apiBase}/api/orders/create-smart-wallet`;
         
-        const resp = await fetch(apiUrl, {
+        const response = await fetch(apiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ passkeyData: passkeyDataWithWalletId }),
+          body: JSON.stringify({ 
+            passkeyData: enrichedPasskeyData,
+          }),
         });
 
-        if (!resp.ok) {
-          const err = await resp.json().catch(() => ({} as any));
-          throw new Error(err?.error || 'Failed to create smart wallet');
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({} as any));
+          throw new Error(errorData?.error || 'Failed to create smart wallet');
         }
 
-        const data = await resp.json();
+        const data = await response.json();
         const walletAddress = data?.walletAddress;
         const smartWalletIdFromApi = data?.smartWalletId;
-        const smartWalletId = smartWalletIdFromApi || smartWalletIdFromStorage || (passkeyDataWithWalletId as any)?.smartWalletId;
+        const smartWalletId = smartWalletIdFromApi || storedWalletId || (enrichedPasskeyData as any)?.smartWalletId;
 
         if (!walletAddress) {
           throw new Error('No wallet address returned');
         }
 
         const finalPasskeyData = {
-          ...passkeyDataWithWalletId,
-          smartWalletId: smartWalletId || (passkeyDataWithWalletId as any)?.smartWalletId,
-          walletId: smartWalletId || (passkeyDataWithWalletId as any)?.smartWalletId,
-          smartWalletID: smartWalletId || (passkeyDataWithWalletId as any)?.smartWalletId,
+          ...enrichedPasskeyData,
+          smartWalletId: smartWalletId || (enrichedPasskeyData as any)?.smartWalletId,
+          walletId: smartWalletId || (enrichedPasskeyData as any)?.smartWalletId,
+          smartWalletID: smartWalletId || (enrichedPasskeyData as any)?.smartWalletId,
         } as any as PasskeyData;
 
         const newState: WalletState = {
@@ -291,6 +381,12 @@ export function useLazorAuth() {
     [wallet, saveToStorage]
   );
 
+  /**
+   * Registers a new wallet by creating both passkey and smart wallet
+   *
+   * @returns Promise resolving to passkey data and wallet address
+   * @throws Error if registration fails at any step
+   */
   const registerNewWallet = useCallback(async (): Promise<{
     passkeyData: PasskeyData;
     walletAddress: string;
@@ -299,9 +395,24 @@ export function useLazorAuth() {
     const walletAddress = await createSmartWallet(passkeyData);
 
     return { passkeyData, walletAddress };
-  }, [wallet, loginWithPasskey, createSmartWallet]);
+  }, [wallet, loginWithPasskey, createSmartWallet, state.pubkey]);
 
+  /**
+   * Logs out user by disconnecting wallet and clearing all stored session data
+   *
+   * @returns Promise that resolves when logout is complete
+   */
   const logout = useCallback(async () => {
+    // Disconnect wallet from Lazorkit SDK first
+    if (wallet?.disconnect && typeof wallet.disconnect === 'function') {
+      try {
+        await wallet.disconnect();
+      } catch (error) {
+        // Ignore disconnect errors, continue with cleanup
+      }
+    }
+
+    // Clear storage
     const storage = getStorage();
     if (storage) {
       try {
@@ -310,18 +421,19 @@ export function useLazorAuth() {
         await Promise.resolve(storage.removeItem(STORAGE_KEYS.SMART_WALLET_ID));
         await Promise.resolve(storage.removeItem(STORAGE_KEYS.HAS_PASSKEY));
         await Promise.resolve(storage.removeItem(STORAGE_KEYS.HAS_WALLET));
-      } catch (e) {
+      } catch (error) {
         // Ignore storage errors
       }
     }
 
+    // Reset state
     setState({
       hasPasskey: false,
       hasWallet: false,
       pubkey: undefined,
       passkeyData: undefined,
     });
-  }, []);
+  }, [wallet]);
 
   return {
     isLoggedIn: state.hasPasskey && state.hasWallet,

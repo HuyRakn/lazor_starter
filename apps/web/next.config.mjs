@@ -1,11 +1,17 @@
 /** @type {import('next').NextConfig} */
 import { createRequire } from 'module';
+import path from 'path';
 
 const require = createRequire(import.meta.url);
 
 const nextConfig = {
   reactStrictMode: true,
-  transpilePackages: ['@lazor-starter/core', '@lazor-starter/ui'],
+  // Ensure all Lazorkit packages are transpiled for Next.js bundler
+  transpilePackages: ['@lazor-starter/core', '@lazor-starter/ui', '@lazorkit/wallet'],
+  // Fix workspace root detection when multiple lockfiles exist
+  outputFileTracingRoot: path.join(process.cwd(), '../..'),
+  // Explicit dist dir to avoid Turbopack path resolution issues on Windows
+  distDir: '.next',
   // Note: Next.js 16 uses Turbopack by default
   // Webpack config below will be used when Turbopack is disabled via --no-turbo flag
   // Webpack config to exclude expo modules (they're only for mobile)
@@ -17,6 +23,7 @@ const nextConfig = {
     config.resolve.alias = {
       ...config.resolve.alias,
       // Force web versions by excluding native extensions
+      // Version 1.8.4 has prebuilt dist, use default resolution
     };
     
     // Add rule to ignore .native.* files
