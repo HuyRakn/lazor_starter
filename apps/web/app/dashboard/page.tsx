@@ -80,8 +80,8 @@ export default function DashboardPage() {
     '/images/solana_superteam_vietnam_logo.jpg',
     '/images/poster-4.jpg',
     '/images/poster-5.jpg',
-    '/images/kay.jpg',
-    '/images/chaukhac.jpg',
+    '/images/poster-6.jpg',
+    '/images/poster-1.jpg',
     '/images/superteamvn.jpg',
     '/images/lazorkit-logo.png',
     '/images/poster-1.jpg',
@@ -90,8 +90,8 @@ export default function DashboardPage() {
     '/images/poster-3.jpg',
     '/images/solana_superteam_vietnam_logo.jpg',
     '/images/poster-5.jpg',
-    '/images/kay.jpg',
-    '/images/chaukhac.jpg',
+    '/images/poster-6.jpg',
+    '/images/poster-3.jpg',
     '/images/superteamvn.jpg',
     '/images/lazorkit-logo.png',
     '/images/poster-1.jpg',
@@ -674,7 +674,7 @@ export default function DashboardPage() {
       {/* Floating Logout Icon over marquee (desktop) */}
       <button
         onClick={handleLogout}
-        className="fixed top-6 left-6 z-30 hidden lg:inline-flex rounded-full p-3 bg-black/70 border border-white/25 hover:bg-black/85 transition"
+        className="absolute top-6 left-6 z-30 hidden lg:inline-flex rounded-full p-3 bg-black/70 border border-white/25 hover:bg-black/85 transition"
         title="Logout"
       >
         <svg
@@ -797,7 +797,7 @@ export default function DashboardPage() {
             {/* Mobile Logout Icon (right aligned) */}
             <button
               onClick={handleLogout}
-              className="fixed top-2 right-2 z-30 lg:hidden rounded-full p-3 bg-black/70 border border-white/25 hover:bg-black/85 transition"
+              className="absolute top-2 right-2 z-30 rounded-full p-3 bg-black/70 border border-white/25 hover:bg-black/85 transition"
               title="Logout"
             >
               <svg
