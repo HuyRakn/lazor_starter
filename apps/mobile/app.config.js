@@ -36,15 +36,17 @@ export default {
       // These will be available via Constants.expoConfig.extra
       lazorkitRpcUrl:
         process.env.NEXT_PUBLIC_LAZORKIT_RPC_URL ||
-        'https://api.devnet.solana.com',
+        process.env.NEXT_PUBLIC_LAZORKIT_RPC_URL_DEVNET ||
+        '',
       lazorkitPaymasterUrl:
         process.env.NEXT_PUBLIC_LAZORKIT_PAYMASTER_URL ||
-        'https://kora.devnet.lazorkit.com/',
+        process.env.NEXT_PUBLIC_LAZORKIT_PAYMASTER_URL_DEVNET ||
+        '',
       lazorkitPortalUrl:
         process.env.NEXT_PUBLIC_LAZORKIT_PORTAL_URL ||
-        'https://portal.lazor.sh',
-      apiBaseUrl:
-        process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001',
+        process.env.NEXT_PUBLIC_LAZORKIT_PORTAL_URL_DEVNET ||
+        '',
+      apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || '',
     },
   },
 };

@@ -18,8 +18,14 @@ export interface WalletState {
 }
 
 export interface GaslessTxOptions {
-  paymasterUrl: string;
+  paymasterUrl?: string;
   skipPreflight?: boolean;
+  /** Token address for gas fees (e.g. USDC mint address) */
+  feeToken?: string;
+  /** Max compute units for the transaction */
+  computeUnitLimit?: number;
+  /** Network to use for simulation */
+  clusterSimulation?: 'devnet' | 'mainnet';
 }
 
 

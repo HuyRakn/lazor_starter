@@ -4,13 +4,17 @@ import { useState, useCallback, useEffect } from 'react';
 import { useLazorWallet } from './useLazorWallet';
 import type { PasskeyData, WalletState } from '../types';
 import { getStorage } from '../utils/storage';
+import { useNetworkStore } from '../state/networkStore';
 
 const STORAGE_KEYS = {
   PASSKEY_DATA: 'lazorkit-passkey-data',
-  WALLET_ADDRESS: 'lazorkit-wallet-address',
-  SMART_WALLET_ID: 'lazorkit-smart-wallet-id',
+  WALLET_ADDRESS_MAINNET: 'lazorkit-wallet-address-mainnet',
+  WALLET_ADDRESS_DEVNET: 'lazorkit-wallet-address-devnet',
+  SMART_WALLET_ID_MAINNET: 'lazorkit-smart-wallet-id-mainnet',
+  SMART_WALLET_ID_DEVNET: 'lazorkit-smart-wallet-id-devnet',
   HAS_PASSKEY: 'lazorkit-has-passkey',
-  HAS_WALLET: 'lazorkit-has-wallet',
+  HAS_WALLET_MAINNET: 'lazorkit-has-wallet-mainnet',
+  HAS_WALLET_DEVNET: 'lazorkit-has-wallet-devnet',
 };
 
 /**
@@ -34,6 +38,7 @@ const STORAGE_KEYS = {
  */
 export function useLazorAuth() {
   const wallet = useLazorWallet();
+  const network = useNetworkStore((state) => state.network);
   const [state, setState] = useState<WalletState>({
     hasPasskey: false,
     hasWallet: false,
@@ -58,9 +63,13 @@ export function useLazorAuth() {
 
       try {
         const hasPasskeyString = await Promise.resolve(storage.getItem(STORAGE_KEYS.HAS_PASSKEY));
-        const hasWalletString = await Promise.resolve(storage.getItem(STORAGE_KEYS.HAS_WALLET));
-        const pubkey = await Promise.resolve(storage.getItem(STORAGE_KEYS.WALLET_ADDRESS)) || undefined;
-        const smartWalletIdString = await Promise.resolve(storage.getItem(STORAGE_KEYS.SMART_WALLET_ID)) || undefined;
+        const walletAddressKey = network === 'devnet' ? STORAGE_KEYS.WALLET_ADDRESS_DEVNET : STORAGE_KEYS.WALLET_ADDRESS_MAINNET;
+        const hasWalletKey = network === 'devnet' ? STORAGE_KEYS.HAS_WALLET_DEVNET : STORAGE_KEYS.HAS_WALLET_MAINNET;
+        const smartWalletIdKey = network === 'devnet' ? STORAGE_KEYS.SMART_WALLET_ID_DEVNET : STORAGE_KEYS.SMART_WALLET_ID_MAINNET;
+        
+        const hasWalletString = await Promise.resolve(storage.getItem(hasWalletKey));
+        const pubkey = await Promise.resolve(storage.getItem(walletAddressKey)) || undefined;
+        const smartWalletIdString = await Promise.resolve(storage.getItem(smartWalletIdKey)) || undefined;
         const passkeyDataString = await Promise.resolve(storage.getItem(STORAGE_KEYS.PASSKEY_DATA));
         
         const hasPasskey = hasPasskeyString === 'true';
@@ -89,7 +98,7 @@ export function useLazorAuth() {
     };
 
     initState();
-  }, []);
+  }, [network]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -114,7 +123,7 @@ export function useLazorAuth() {
           await new Promise(resolve => setTimeout(resolve, 300));
           
           if (wallet?.connect && typeof wallet.connect === 'function') {
-            await wallet.connect();
+            await wallet.connect({ feeMode: 'paymaster' });
           }
         } catch (error) {
           // Ignore auto-connect errors
@@ -138,24 +147,28 @@ export function useLazorAuth() {
       const storage = getStorage();
       if (!storage) return;
 
+      const walletAddressKey = network === 'devnet' ? STORAGE_KEYS.WALLET_ADDRESS_DEVNET : STORAGE_KEYS.WALLET_ADDRESS_MAINNET;
+      const hasWalletKey = network === 'devnet' ? STORAGE_KEYS.HAS_WALLET_DEVNET : STORAGE_KEYS.HAS_WALLET_MAINNET;
+      const smartWalletIdKey = network === 'devnet' ? STORAGE_KEYS.SMART_WALLET_ID_DEVNET : STORAGE_KEYS.SMART_WALLET_ID_MAINNET;
+
       try {
         if (newState.hasPasskey !== undefined) {
           await Promise.resolve(storage.setItem(STORAGE_KEYS.HAS_PASSKEY, String(newState.hasPasskey)));
         }
         if (newState.hasWallet !== undefined) {
-          await Promise.resolve(storage.setItem(STORAGE_KEYS.HAS_WALLET, String(newState.hasWallet)));
+          await Promise.resolve(storage.setItem(hasWalletKey, String(newState.hasWallet)));
         }
         if (newState.pubkey !== undefined) {
           if (newState.pubkey) {
-            await Promise.resolve(storage.setItem(STORAGE_KEYS.WALLET_ADDRESS, newState.pubkey));
+            await Promise.resolve(storage.setItem(walletAddressKey, newState.pubkey));
           } else {
-            await Promise.resolve(storage.removeItem(STORAGE_KEYS.WALLET_ADDRESS));
+            await Promise.resolve(storage.removeItem(walletAddressKey));
           }
         }
         const passkeyDataTyped = newState.passkeyData as any;
         if (passkeyDataTyped?.smartWalletId || passkeyDataTyped?.walletId || passkeyDataTyped?.smartWalletID) {
           const smartWalletId = passkeyDataTyped.smartWalletId || passkeyDataTyped.walletId || passkeyDataTyped.smartWalletID;
-          await Promise.resolve(storage.setItem(STORAGE_KEYS.SMART_WALLET_ID, String(smartWalletId)));
+          await Promise.resolve(storage.setItem(smartWalletIdKey, String(smartWalletId)));
         }
         if (newState.passkeyData !== undefined) {
           if (newState.passkeyData) {
@@ -169,20 +182,20 @@ export function useLazorAuth() {
                                  (newState.passkeyData as any)?.walletId || 
                                  (newState.passkeyData as any)?.smartWalletID;
             if (smartWalletId) {
-              await Promise.resolve(storage.setItem(STORAGE_KEYS.SMART_WALLET_ID, String(smartWalletId)));
+              await Promise.resolve(storage.setItem(smartWalletIdKey, String(smartWalletId)));
             } else {
-              await Promise.resolve(storage.removeItem(STORAGE_KEYS.SMART_WALLET_ID));
+              await Promise.resolve(storage.removeItem(smartWalletIdKey));
             }
           } else {
             await Promise.resolve(storage.removeItem(STORAGE_KEYS.PASSKEY_DATA));
-            await Promise.resolve(storage.removeItem(STORAGE_KEYS.SMART_WALLET_ID));
+            await Promise.resolve(storage.removeItem(smartWalletIdKey));
           }
         }
       } catch (error) {
         // Ignore storage errors
       }
     },
-    []
+    [network]
   );
 
   /**
@@ -194,6 +207,7 @@ export function useLazorAuth() {
    * @throws Error if passkey creation or authentication fails
    */
   const loginWithPasskey = useCallback(async (): Promise<PasskeyData> => {
+    const currentNetwork = useNetworkStore.getState().network;
     try {
       if (wallet?.createPasskeyOnly) {
         const passkeyData = await wallet.createPasskeyOnly();
@@ -205,8 +219,9 @@ export function useLazorAuth() {
         let storedWalletId: string | null = null;
         if (storage) {
           try {
+            const smartWalletIdKey = currentNetwork === 'devnet' ? STORAGE_KEYS.SMART_WALLET_ID_DEVNET : STORAGE_KEYS.SMART_WALLET_ID_MAINNET;
             storedWalletId =
-              (await Promise.resolve(storage.getItem(STORAGE_KEYS.SMART_WALLET_ID))) || null;
+              (await Promise.resolve(storage.getItem(smartWalletIdKey))) || null;
           } catch (error) {
             // Ignore storage read errors
           }
@@ -238,7 +253,7 @@ export function useLazorAuth() {
         throw new Error('Passkey login not available. Make sure LazorProvider is set up correctly.');
       }
 
-      const connectedWallet = await wallet.connect();
+      const connectedWallet = await wallet.connect({ feeMode: 'paymaster' });
       if (!connectedWallet?.smartWallet) {
         throw new Error('Passkey login failed: missing smart wallet address');
       }
@@ -268,7 +283,7 @@ export function useLazorAuth() {
     } catch (error) {
       throw error;
     }
-  }, [wallet, state.hasWallet, state.pubkey, saveToStorage]);
+  }, [wallet, state.hasWallet, state.pubkey, saveToStorage, network]);
 
   /**
    * Creates a smart wallet on-chain using passkey data
@@ -287,11 +302,13 @@ export function useLazorAuth() {
       }
 
       try {
+        const currentNetwork = useNetworkStore.getState().network;
         const storage = getStorage();
         let storedWalletId: string | null = null;
         if (storage) {
           try {
-            storedWalletId = await Promise.resolve(storage.getItem(STORAGE_KEYS.SMART_WALLET_ID)) || null;
+            const smartWalletIdKey = currentNetwork === 'devnet' ? STORAGE_KEYS.SMART_WALLET_ID_DEVNET : STORAGE_KEYS.SMART_WALLET_ID_MAINNET;
+            storedWalletId = await Promise.resolve(storage.getItem(smartWalletIdKey)) || null;
           } catch (error) {
             // Ignore storage read errors
           }
@@ -335,6 +352,7 @@ export function useLazorAuth() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
             passkeyData: enrichedPasskeyData,
+            network: useNetworkStore.getState().network === 'devnet' ? 'devnet' : 'mainnet',
           }),
         });
 
@@ -378,7 +396,7 @@ export function useLazorAuth() {
         throw error;
       }
     },
-    [wallet, saveToStorage]
+    [wallet, saveToStorage, network]
   );
 
   /**
@@ -412,15 +430,18 @@ export function useLazorAuth() {
       }
     }
 
-    // Clear storage
+    // Clear storage (both mainnet and devnet)
     const storage = getStorage();
     if (storage) {
       try {
         await Promise.resolve(storage.removeItem(STORAGE_KEYS.PASSKEY_DATA));
-        await Promise.resolve(storage.removeItem(STORAGE_KEYS.WALLET_ADDRESS));
-        await Promise.resolve(storage.removeItem(STORAGE_KEYS.SMART_WALLET_ID));
+        await Promise.resolve(storage.removeItem(STORAGE_KEYS.WALLET_ADDRESS_MAINNET));
+        await Promise.resolve(storage.removeItem(STORAGE_KEYS.WALLET_ADDRESS_DEVNET));
+        await Promise.resolve(storage.removeItem(STORAGE_KEYS.SMART_WALLET_ID_MAINNET));
+        await Promise.resolve(storage.removeItem(STORAGE_KEYS.SMART_WALLET_ID_DEVNET));
         await Promise.resolve(storage.removeItem(STORAGE_KEYS.HAS_PASSKEY));
-        await Promise.resolve(storage.removeItem(STORAGE_KEYS.HAS_WALLET));
+        await Promise.resolve(storage.removeItem(STORAGE_KEYS.HAS_WALLET_MAINNET));
+        await Promise.resolve(storage.removeItem(STORAGE_KEYS.HAS_WALLET_DEVNET));
       } catch (error) {
         // Ignore storage errors
       }

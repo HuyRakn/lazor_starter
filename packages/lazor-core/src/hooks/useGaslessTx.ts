@@ -3,7 +3,8 @@
 import { useCallback } from 'react';
 import { useLazorWallet } from './useLazorWallet';
 import { useLazorAuth } from './useLazorAuth';
-import { TransactionInstruction, SystemProgram, PublicKey, Connection, Transaction } from '@solana/web3.js';
+import { TransactionInstruction, SystemProgram, PublicKey } from '@solana/web3.js';
+import { useNetworkStore } from '../state/networkStore';
 import {
   getAssociatedTokenAddressSync,
   createTransferInstruction,
@@ -23,9 +24,21 @@ import type { GaslessTxOptions } from '../types';
 export function useGaslessTx() {
   const wallet = useLazorWallet();
   const { pubkey, isLoggedIn } = useLazorAuth();
+  const network = useNetworkStore((state) => state.network);
+  const getEnv = (keys: string[]) => {
+    for (const key of keys) {
+      const value =
+        (typeof window !== 'undefined' ? (window as any).process?.env?.[key] : undefined) ||
+        process.env[key];
+      if (value) return value;
+    }
+    return undefined;
+  };
 
   /**
    * Sends a transaction with multiple instructions through Lazorkit Paymaster
+   *
+   * Uses Lazorkit SDK v2.0.0 API: signAndSendTransaction({ instructions, transactionOptions })
    *
    * @param instructions - Array of transaction instructions to execute
    * @param options - Optional gasless transaction options
@@ -45,7 +58,14 @@ export function useGaslessTx() {
         throw new Error('No instructions provided for transaction');
       }
       
-      // Get wallet address first
+      // Validate all instructions before sending
+      for (const ix of instructions) {
+        if (!ix || !ix.programId) {
+          throw new Error('Invalid instruction provided');
+        }
+      }
+      
+      // Get wallet address for validation
       const activeAddress = 
         pubkey || 
         (wallet as any)?.smartWallet || 
@@ -57,65 +77,39 @@ export function useGaslessTx() {
         throw new Error('No wallet address. Please login first.');
       }
       
-      // Validate PublicKey before creating transaction
-      let feePayer: PublicKey;
+      // Validate PublicKey format
       try {
-        feePayer = new PublicKey(activeAddress);
+        new PublicKey(activeAddress);
       } catch (error) {
         throw new Error(`Invalid wallet address: ${activeAddress}`);
       }
       
-      // Get recent blockhash and create Transaction object
-      const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || 
-                     process.env.NEXT_PUBLIC_LAZORKIT_RPC_URL ||
-                     'https://api.devnet.solana.com';
-      const connection = new Connection(rpcUrl, 'confirmed');
+      // Prepare transaction options according to Lazorkit SDK v2.0.0 API
+      const transactionOptions: {
+        feeToken?: string;
+        computeUnitLimit?: number;
+        clusterSimulation?: 'devnet' | 'mainnet';
+      } = {};
       
-      let blockhash: string;
-      try {
-        const latestBlockhash = await connection.getLatestBlockhash('confirmed');
-        blockhash = latestBlockhash.blockhash;
-      } catch (error) {
-        throw new Error('Failed to get recent blockhash. Please check your RPC connection.');
+      // Add feeToken if specified in options
+      if (options?.feeToken) {
+        transactionOptions.feeToken = options.feeToken;
       }
       
-      // Create transaction and add instructions
-      const transaction = new Transaction();
-      
-      // Set blockhash and fee payer
-      transaction.recentBlockhash = blockhash;
-      transaction.feePayer = feePayer;
-      
-      // Add all instructions to transaction
-      for (const ix of instructions) {
-        if (!ix || !ix.programId) {
-          throw new Error('Invalid instruction provided');
-        }
-        transaction.add(ix);
+      // Add computeUnitLimit if specified
+      if (options?.computeUnitLimit) {
+        transactionOptions.computeUnitLimit = options.computeUnitLimit;
       }
       
-      // Validate transaction before sending
-      if (!transaction.recentBlockhash || transaction.recentBlockhash.length === 0) {
-        throw new Error('Transaction missing recent blockhash');
-      }
-      if (!transaction.feePayer) {
-        throw new Error('Transaction missing fee payer');
-      }
-      if (transaction.instructions.length === 0) {
-        throw new Error('Transaction has no instructions');
-      }
+      // Set clusterSimulation based on current network (always set)
+      transactionOptions.clusterSimulation = network;
       
-      // Pass transaction directly to signAndSendTransaction
-      // Lazorkit SDK should accept Transaction object
-      // If SDK only accepts single instruction, we'll need to handle multiple instructions differently
-      if (instructions.length === 1) {
-        // If only one instruction, pass it directly
-        return await wallet.signAndSendTransaction(instructions[0]);
-      } else {
-        // For multiple instructions, pass the transaction object
-        // SDK might accept Transaction object even if type says otherwise
-        return await wallet.signAndSendTransaction(transaction as any);
-      }
+      // Call signAndSendTransaction with new API format
+      // API: signAndSendTransaction({ instructions, transactionOptions })
+      return await wallet.signAndSendTransaction({
+        instructions,
+        transactionOptions,
+      });
     };
 
     try {
@@ -132,7 +126,7 @@ export function useGaslessTx() {
       if (isConnectionError && isLoggedIn && wallet?.connect && typeof wallet.connect === 'function') {
         try {
           await new Promise(resolve => setTimeout(resolve, 500));
-          await wallet.connect();
+          await wallet.connect({ feeMode: 'paymaster' });
           await new Promise(resolve => setTimeout(resolve, 500));
           return await attemptTransaction();
         } catch (connectError: any) {
@@ -142,7 +136,7 @@ export function useGaslessTx() {
       
       throw error;
     }
-  }, [wallet, isLoggedIn]);
+  }, [wallet, isLoggedIn, network]);
 
   /**
    * Transfers SOL tokens to a recipient address (gasless)

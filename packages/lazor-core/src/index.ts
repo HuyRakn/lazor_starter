@@ -11,6 +11,10 @@
 // Providers
 export { LazorProvider } from './providers/LazorProvider';
 
+// State
+export { useNetworkStore } from './state/networkStore';
+export type { Network } from './state/networkStore';
+
 // Hooks
 export { useLazorWallet } from './hooks/useLazorWallet';
 export { useLazorAuth } from './hooks/useLazorAuth';

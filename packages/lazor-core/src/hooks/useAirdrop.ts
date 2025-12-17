@@ -35,7 +35,10 @@ export function useAirdrop() {
         }
 
         const publicKey = new PublicKey(walletAddress);
-        const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || 'https://api.devnet.solana.com';
+        const rpcUrl = process.env.NEXT_PUBLIC_LAZORKIT_RPC_URL_DEVNET;
+        if (!rpcUrl) {
+          throw new Error('Missing Lazorkit RPC URL for devnet. Set NEXT_PUBLIC_LAZORKIT_RPC_URL_DEVNET.');
+        }
         const connection = new Connection(rpcUrl, 'confirmed');
         const lamports = amount * LAMPORTS_PER_SOL;
         

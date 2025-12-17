@@ -16,7 +16,7 @@
   "dependencies": {
     "@lazor-starter/core": "workspace:*",
     "@lazor-starter/ui": "workspace:*",
-    "@lazorkit/wallet": "1.8.4",
+    "@lazorkit/wallet": "2.0.0",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@rn-primitives/avatar": "^1.2.0",
     "@rn-primitives/checkbox": "^1.2.0",

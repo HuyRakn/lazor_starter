@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { LazorProvider } from '@lazor-starter/core';
+import { LazorProviderWrapper } from '../components/LazorProviderWrapper';
 
 export const metadata: Metadata = {
   title: 'Lazor Starter - Universal Lazorkit SDK Starter',
@@ -61,9 +61,9 @@ export default function RootLayout({
             `,
           }}
         />
-        <LazorProvider>
+        <LazorProviderWrapper>
           {children}
-        </LazorProvider>
+        </LazorProviderWrapper>
       </body>
     </html>
   );

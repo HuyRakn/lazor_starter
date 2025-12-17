@@ -40,8 +40,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/ui
       '@lazorkit/wallet':
-        specifier: 1.8.4
-        version: 1.8.4(@coral-xyz/anchor@0.31.1)(@solana-program/token@0.9.0)(@solana/kit@5.0.0)(@solana/kora@0.1.0)(@solana/wallet-adapter-base@0.9.27)(@solana/wallet-standard-features@1.3.0)(@solana/web3.js@1.98.4)(@wallet-standard/base@1.1.0)(@wallet-standard/features@1.1.0)(@wallet-standard/wallet@1.1.0)(react-dom@19.1.0)(react@19.1.0)(zustand@5.0.9)
+        specifier: 2.0.0
+        version: 2.0.0(@coral-xyz/anchor@0.31.1)(@solana-program/token@0.9.0)(@solana/kit@5.0.0)(@solana/kora@0.1.0)(@solana/wallet-adapter-base@0.9.27)(@solana/wallet-standard-features@1.3.0)(@solana/web3.js@1.98.4)(@wallet-standard/base@1.1.0)(@wallet-standard/features@1.1.0)(@wallet-standard/wallet@1.1.0)(react-dom@19.1.0)(react@19.1.0)(zustand@5.0.9)
       '@react-native-async-storage/async-storage':
         specifier: 2.2.0
         version: 2.2.0(react-native@0.81.5)
@@ -176,8 +176,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/ui
       '@lazorkit/wallet':
-        specifier: 1.8.4
-        version: 1.8.4(@coral-xyz/anchor@0.31.1)(@solana-program/token@0.9.0)(@solana/kit@5.0.0)(@solana/kora@0.1.0)(@solana/wallet-adapter-base@0.9.27)(@solana/wallet-standard-features@1.3.0)(@solana/web3.js@1.98.4)(@wallet-standard/base@1.1.0)(@wallet-standard/features@1.1.0)(@wallet-standard/wallet@1.1.0)(react-dom@18.3.1)(react@18.3.1)(zustand@5.0.9)
+        specifier: 2.0.0
+        version: 2.0.0(@coral-xyz/anchor@0.31.1)(@solana-program/token@0.9.0)(@solana/kit@5.0.0)(@solana/kora@0.1.0)(@solana/wallet-adapter-base@0.9.27)(@solana/wallet-standard-features@1.3.0)(@solana/web3.js@1.98.4)(@wallet-standard/base@1.1.0)(@wallet-standard/features@1.1.0)(@wallet-standard/wallet@1.1.0)(react-dom@18.3.1)(react@18.3.1)(zustand@5.0.9)
       '@radix-ui/react-avatar':
         specifier: ^1.1.11
         version: 1.1.11(@types/react-dom@19.2.3)(@types/react@19.2.7)(react-dom@18.3.1)(react@18.3.1)
@@ -312,8 +312,8 @@ importers:
   packages/lazor-core:
     dependencies:
       '@lazorkit/wallet':
-        specifier: 1.8.4
-        version: 1.8.4(@coral-xyz/anchor@0.31.1)(@solana-program/token@0.9.0)(@solana/kit@5.0.0)(@solana/kora@0.1.0)(@solana/wallet-adapter-base@0.9.27)(@solana/wallet-standard-features@1.3.0)(@solana/web3.js@1.98.4)(@wallet-standard/base@1.1.0)(@wallet-standard/features@1.1.0)(@wallet-standard/wallet@1.1.0)(react-dom@19.1.0)(react@19.1.0)(zustand@5.0.9)
+        specifier: 2.0.0
+        version: 2.0.0(@coral-xyz/anchor@0.31.1)(@solana-program/token@0.9.0)(@solana/kit@5.0.0)(@solana/kora@0.1.0)(@solana/wallet-adapter-base@0.9.27)(@solana/wallet-standard-features@1.3.0)(@solana/web3.js@1.98.4)(@wallet-standard/base@1.1.0)(@wallet-standard/features@1.1.0)(@wallet-standard/wallet@1.1.0)(react-dom@19.1.0)(react@19.1.0)(zustand@5.0.9)
       '@solana/spl-token':
         specifier: ^0.4.14
         version: 0.4.14(@solana/web3.js@1.98.4)(bufferutil@4.0.9)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10)
@@ -2413,8 +2413,8 @@ packages:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  /@lazorkit/wallet@1.8.4(@coral-xyz/anchor@0.31.1)(@solana-program/token@0.9.0)(@solana/kit@5.0.0)(@solana/kora@0.1.0)(@solana/wallet-adapter-base@0.9.27)(@solana/wallet-standard-features@1.3.0)(@solana/web3.js@1.98.4)(@wallet-standard/base@1.1.0)(@wallet-standard/features@1.1.0)(@wallet-standard/wallet@1.1.0)(react-dom@18.3.1)(react@18.3.1)(zustand@5.0.9):
-    resolution: {integrity: sha512-wYpdrXrS2ij9vU5ZzScadOXzRc3F3kPZoAD16l5RlOaSogkgWSfyXSWmcrcwstuc8myWKqwtuxTP4HPtvHdKnA==}
+  /@lazorkit/wallet@2.0.0(@coral-xyz/anchor@0.31.1)(@solana-program/token@0.9.0)(@solana/kit@5.0.0)(@solana/kora@0.1.0)(@solana/wallet-adapter-base@0.9.27)(@solana/wallet-standard-features@1.3.0)(@solana/web3.js@1.98.4)(@wallet-standard/base@1.1.0)(@wallet-standard/features@1.1.0)(@wallet-standard/wallet@1.1.0)(react-dom@18.3.1)(react@18.3.1)(zustand@5.0.9):
+    resolution: {integrity: sha512-hD7OzPJNgSmdjS2hOGQjmVb3mtg8pDb2pYKdDUZr+x60NuqDIXshQWkc5pstiugZuZfcbope6uyFtReb+O5+mw==}
     peerDependencies:
       '@coral-xyz/anchor': 0.31.1
       '@solana-program/token': ^0.9.0
@@ -2448,8 +2448,8 @@ packages:
       zustand: 5.0.9(@types/react@19.2.7)(react@18.3.1)
     dev: false
 
-  /@lazorkit/wallet@1.8.4(@coral-xyz/anchor@0.31.1)(@solana-program/token@0.9.0)(@solana/kit@5.0.0)(@solana/kora@0.1.0)(@solana/wallet-adapter-base@0.9.27)(@solana/wallet-standard-features@1.3.0)(@solana/web3.js@1.98.4)(@wallet-standard/base@1.1.0)(@wallet-standard/features@1.1.0)(@wallet-standard/wallet@1.1.0)(react-dom@19.1.0)(react@19.1.0)(zustand@5.0.9):
-    resolution: {integrity: sha512-wYpdrXrS2ij9vU5ZzScadOXzRc3F3kPZoAD16l5RlOaSogkgWSfyXSWmcrcwstuc8myWKqwtuxTP4HPtvHdKnA==}
+  /@lazorkit/wallet@2.0.0(@coral-xyz/anchor@0.31.1)(@solana-program/token@0.9.0)(@solana/kit@5.0.0)(@solana/kora@0.1.0)(@solana/wallet-adapter-base@0.9.27)(@solana/wallet-standard-features@1.3.0)(@solana/web3.js@1.98.4)(@wallet-standard/base@1.1.0)(@wallet-standard/features@1.1.0)(@wallet-standard/wallet@1.1.0)(react-dom@19.1.0)(react@19.1.0)(zustand@5.0.9):
+    resolution: {integrity: sha512-hD7OzPJNgSmdjS2hOGQjmVb3mtg8pDb2pYKdDUZr+x60NuqDIXshQWkc5pstiugZuZfcbope6uyFtReb+O5+mw==}
     peerDependencies:
       '@coral-xyz/anchor': 0.31.1
       '@solana-program/token': ^0.9.0
