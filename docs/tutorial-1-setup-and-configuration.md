@@ -26,24 +26,27 @@ Create a `.env.local` file in the **root directory** (not in apps/web or apps/mo
 
 ```env
 # ===== MAINNET (PUBLIC) =====
-NEXT_PUBLIC_LAZORKIT_RPC_URL=https://mainnet.helius-rpc.com/?api-key=47712b7a-ea63-49b8-9685-dff77d9eb55a
+# Replace with your own RPC URL (e.g., from Helius, QuickNode, or Alchemy)
+NEXT_PUBLIC_LAZORKIT_RPC_URL=https://mainnet.helius-rpc.com/?api-key=YOUR_API_KEY_HERE
 NEXT_PUBLIC_LAZORKIT_PORTAL_URL=https://portal.lazor.sh
 NEXT_PUBLIC_LAZORKIT_PAYMASTER_URL=https://kora.lazorkit.com
-NEXT_PUBLIC_LAZORKIT_API_KEY=kora_live_api_cfa755da42cf3026291a5069e74ff37f3514d06400059c4408a20738e334df1d
+# Get your API key from Lazorkit dashboard
+NEXT_PUBLIC_LAZORKIT_API_KEY=YOUR_LAZORKIT_API_KEY_HERE
 
 # ===== DEVNET (PUBLIC) =====
-NEXT_PUBLIC_LAZORKIT_RPC_URL_DEVNET=https://devnet.helius-rpc.com/?api-key=47712b7a-ea63-49b8-9685-dff77d9eb55a
+# Replace with your own devnet RPC URL
+NEXT_PUBLIC_LAZORKIT_RPC_URL_DEVNET=https://devnet.helius-rpc.com/?api-key=YOUR_API_KEY_HERE
 NEXT_PUBLIC_LAZORKIT_PORTAL_URL_DEVNET=https://portal.lazor.sh
 NEXT_PUBLIC_LAZORKIT_PAYMASTER_URL_DEVNET=https://kora.devnet.lazorkit.com
-
-# ===== Backend API (Optional - for smart wallet creation) =====
-NEXT_PUBLIC_API_BASE_URL=http://localhost:3001
 ```
 
 **Important Notes:**
 - All environment variables use `NEXT_PUBLIC_` prefix for client-side access
 - Mobile app reads from the same `.env.local` file via `app.config.js`
 - Both Web and Mobile share the same configuration
+- **Replace placeholders** (`YOUR_API_KEY_HERE`, `YOUR_LAZORKIT_API_KEY_HERE`) with your actual keys:
+  - **RPC URLs**: Get from [Helius](https://helius.dev), [QuickNode](https://quicknode.com), or [Alchemy](https://alchemy.com)
+  - **Lazorkit API Key**: Get from [Lazorkit Dashboard](https://lazorkit.com) (required for mainnet gasless transactions)
 
 ## Step 3: Build Core Package
 
