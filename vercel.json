@@ -1,0 +1,7 @@
+{
+  "buildCommand": "cd packages/lazor-core && pnpm build && cd ../../apps/web && pnpm build",
+  "installCommand": "pnpm install --ignore-scripts",
+  "framework": "nextjs",
+  "outputDirectory": "apps/web/.next"
+}
+

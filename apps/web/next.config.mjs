@@ -62,10 +62,10 @@ const nextConfig = {
       };
     });
 
-    // Use webpack.IgnorePlugin to completely ignore react-native packages
+    // Use webpack.IgnorePlugin to completely ignore react-native packages and native modules
     config.plugins.push(
       new webpack.IgnorePlugin({
-        resourceRegExp: /^(react-native|react-native-css-interop|nativewind|react-native-reanimated|react-native-screens|react-native-svg|lucide-react-native|@rn-primitives\/.*)$/,
+        resourceRegExp: /^(react-native|react-native-css-interop|nativewind|react-native-reanimated|react-native-screens|react-native-svg|lucide-react-native|@rn-primitives\/.*|bigint-buffer)$/,
       })
     );
 
@@ -77,6 +77,7 @@ const nextConfig = {
         ...config.resolve.fallback,
         bufferutil: false,
         'utf-8-validate': false,
+        'bigint-buffer': false, // Native module not needed for web build
         buffer: require.resolve('buffer/'),
         stream: require.resolve('stream-browserify'),
         crypto: require.resolve('crypto-browserify'),
@@ -94,6 +95,7 @@ const nextConfig = {
         ...config.resolve.fallback,
         bufferutil: false,
         'utf-8-validate': false,
+        'bigint-buffer': false, // Native module not needed, use pure JS fallback
       };
     }
     
@@ -101,6 +103,7 @@ const nextConfig = {
     config.ignoreWarnings = [
       { module: /bufferutil/ },
       { module: /utf-8-validate/ },
+      { module: /bigint-buffer/ }, // Native module not needed for web
       { module: /react-native-css-interop/ },
       { module: /nativewind/ },
       { module: /react-native/ },
