@@ -1,24 +1,24 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useWallet as useLazorWalletSDK } from '@lazorkit/wallet';
+import { useWallet as useLazorkitWalletSDK } from '@lazorkit/wallet';
 
 /**
- * Wrapper hook for Lazorkit SDK wallet functionality
+ * Wrapper hook for Lazorkit React SDK (web), shared for web & mobile
  *
- * Shared hook for monorepo (Web & Mobile).
- * Provides access to Lazorkit wallet methods with consistent API
- * across Web and Mobile platforms.
+ * Mobile uses polyfills (window, Buffer, WebSocket, etc.) to use the same web SDK,
+ * avoiding direct import of React Native adapter in core (which previously caused web errors).
  *
- * @returns {Object} Lazorkit wallet SDK instance with additional helper methods
+ * @returns {Object} Wallet SDK instance with additional methods
  * @returns {Function} returns.createPasskeyOnly - Create passkey without wallet
  * @returns {Function} returns.createSmartWalletOnly - Create wallet without passkey
  * @returns {Function} returns.createSmartWallet - Create both passkey and wallet
- * @returns {Function} returns.signAndSendTransaction - Sign and send transaction
  * @returns {Function} returns.connect - Connect wallet
+ * @returns {Function} returns.disconnect - Disconnect wallet
+ * @returns {Function} returns.signAndSendTransaction - Sign and send transaction
  */
-export function useLazorWallet(): any {
-  const sdk = useLazorWalletSDK();
+export function useWallet() {
+  const sdk = useLazorkitWalletSDK();
 
   return useMemo(() => {
     const createPasskeyOnly = (sdk as any)?.createPasskeyOnly;

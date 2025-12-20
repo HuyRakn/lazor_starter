@@ -1,11 +1,12 @@
 'use client';
 
 import {
-  useLazorAuth,
+  useAuth,
   useGaslessTx,
   useWalletBalance,
   useAirdrop,
   formatAddress,
+  useNetworkStore,
 } from '@lazor-starter/core';
 import { 
   Card,
@@ -34,19 +35,31 @@ export default function DashboardPage() {
     isInitialized, 
     isLoggedIn,
     registerNewWallet,
-  } = useLazorAuth();
+    loginWithPasskey,
+    createSmartWallet,
+    passkeyData,
+  } = useAuth();
   const { transferSOL, transferSPLToken } = useGaslessTx();
   const { requestSOLAirdrop, requestUSDCAirdrop, loading: airdropLoading } = useAirdrop();
+  const { network, setNetwork } = useNetworkStore();
   
   // Login state
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [networkSwitchLoading, setNetworkSwitchLoading] = useState(false);
+
+  // Select correct USDC mint by network
+  const usdcMintAddress = useMemo(
+    () => (network === 'devnet' ? TOKEN_MINTS.USDC_DEVNET : TOKEN_MINTS.USDC_MAINNET),
+    [network]
+  );
+  const defaultMint = usdcMintAddress;
   
-  const USDC_MAINNET_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
-  const defaultMint = useMemo(() => TOKEN_MINTS.USDC_MAINNET || USDC_MAINNET_MINT, []);
-  
-  // Fetch balances onchain
-  const { solBalance, usdcBalance, solBalanceText, usdcBalanceText } = useWalletBalance(pubkey, USDC_MAINNET_MINT);
+  // Fetch balances onchain (SOL + network-specific USDC)
+  const { solBalance, usdcBalance, solBalanceText, usdcBalanceText } = useWalletBalance(
+    pubkey,
+    usdcMintAddress
+  );
   const solAmountValue = solBalance ?? 0;
   const usdcAmountValue = usdcBalance ?? 0;
   
@@ -70,8 +83,6 @@ export default function DashboardPage() {
 
   // Local images for 3D Marquee from public/images
   const marqueeImageList = [
-    '/images/kay.jpg',
-    '/images/chaukhac.jpg',
     '/images/superteamvn.jpg',
     '/images/lazorkit-logo.png',
     '/images/poster-1.jpg',
@@ -106,6 +117,9 @@ export default function DashboardPage() {
   /**
    * Handles login/registration flow
    *
+   * Uses the currently selected network from useNetworkStore.
+   * Default network is mainnet, but user can switch to devnet before logging in.
+   *
    * @returns Promise that resolves when login completes
    */
   const handleLogin = async () => {
@@ -121,6 +135,55 @@ export default function DashboardPage() {
     } finally {
       setLoginLoading(false);
     }
+  };
+
+  /**
+   * Formats error messages to be more user-friendly
+   *
+   * Parses JSON error responses and extracts meaningful messages.
+   * Handles rate limit errors, network errors, and generic errors.
+   *
+   * @param error - The error object or string to format
+   * @returns Formatted error message string
+   */
+  const formatErrorMessage = (error: any): string => {
+    if (!error) return 'An unknown error occurred';
+    
+    const errorMessage = error?.message || error?.toString() || 'An unknown error occurred';
+    
+    // Try to parse JSON error responses
+    try {
+      // Check if error message contains JSON
+      const jsonMatch = errorMessage.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (parsed?.error?.message) {
+          return parsed.error.message;
+        }
+      }
+      
+      // Check for rate limit errors
+      if (errorMessage.toLowerCase().includes('rate limit')) {
+        return 'Rate limit exceeded. The devnet faucet has a limit of 1 SOL per project per day. Please try again later.';
+      }
+      
+      // Check for common error patterns
+      if (errorMessage.includes('403')) {
+        return 'Request denied. You may have exceeded the rate limit. Please try again later.';
+      }
+      
+      if (errorMessage.includes('timeout') || errorMessage.includes('timed out')) {
+        return 'Request timed out. Please check your connection and try again.';
+      }
+      
+      if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+        return 'Network error. Please check your internet connection and try again.';
+      }
+    } catch {
+      // If parsing fails, return the original message
+    }
+    
+    return errorMessage;
   };
 
   /**
@@ -142,7 +205,7 @@ export default function DashboardPage() {
     if (airdropToken === 'SOL') {
       const amount = parseFloat(airdropAmount);
       if (isNaN(amount) || amount <= 0) {
-        setAirdropError('Invalid amount');
+        setAirdropError('Please enter a valid amount');
         return;
     }
     }
@@ -166,7 +229,7 @@ export default function DashboardPage() {
         );
       }
     } catch (error: any) {
-      setAirdropError(error?.message || 'Airdrop request failed');
+      setAirdropError(formatErrorMessage(error));
     }
   };
 
@@ -218,14 +281,23 @@ export default function DashboardPage() {
    * Handles logout action
    *
    * Logs out user and clears session.
+   * Resets network to mainnet for next login.
    * Page will automatically show login form.
    *
    * @returns void - Function does not return a value
    */
   const handleLogout = () => {
     logout();
+    setLoginError(null);
+    setAirdropError(null);
+    setAirdropSuccess(null);
+    setTransferError(null);
+    setTransferSuccess(null);
+    // Reset network to mainnet for next login
+    setNetwork('mainnet');
     // No redirect needed - page will show login form automatically
   };
+
 
 
   /**
@@ -282,7 +354,9 @@ export default function DashboardPage() {
                         <span className="text-base font-semibold text-white">{item.label}</span>
                         <span className="text-xs text-slate-400">{item.balance}</span>
                       </div>
-                      <span className="text-sm text-slate-200">{active ? 'Selected' : 'Choose'}</span>
+                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/40">
+                      {active && <span className="block h-2.5 w-2.5 rounded-full bg-white" />}
+                    </span>
                     </button>
                   );
                 })}
@@ -403,7 +477,22 @@ export default function DashboardPage() {
             {transferError && (
               <Alert variant="destructive" className="mt-2">
                 <AlertDescription className="text-red-200 text-sm">
-                  {transferError}
+                  <div className="flex items-start gap-2">
+                    <svg
+                      className="w-4 h-4 mt-0.5 flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    <span className="flex-1">{formatErrorMessage(transferError)}</span>
+                  </div>
                 </AlertDescription>
               </Alert>
             )}
@@ -438,7 +527,7 @@ export default function DashboardPage() {
     {
       value: 'airdrop',
       label: 'Airdrop',
-      disabled: true,
+      disabled: network !== 'devnet',
       content: (
         <div className="grid grid-cols-1 gap-6">
           <Card className="p-6 md:p-7 space-y-5">
@@ -473,7 +562,9 @@ export default function DashboardPage() {
                         <span className="text-base font-semibold text-white">{item.label}</span>
                         <span className="text-xs text-slate-400">{item.balance}</span>
                       </div>
-                      <span className="text-sm text-slate-200">{active ? 'Selected' : 'Choose'}</span>
+                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/40">
+                      {active && <span className="block h-2.5 w-2.5 rounded-full bg-white" />}
+                    </span>
                     </button>
                   );
                 })}
@@ -523,7 +614,12 @@ export default function DashboardPage() {
               <div className="flex items-center gap-3 pt-2">
                 <Button
                   onClick={handleAirdrop}
-                  disabled={airdropLoading || (airdropToken === 'SOL' && !airdropAmount) || !pubkey}
+                  disabled={
+                    network !== 'devnet' ||
+                    airdropLoading ||
+                    (airdropToken === 'SOL' && !airdropAmount) ||
+                    !pubkey
+                  }
                   className="h-12 flex-1 text-base"
                 >
                   {airdropLoading ? (
@@ -540,21 +636,49 @@ export default function DashboardPage() {
               {airdropError && (
                 <Alert variant="destructive" className="mt-2">
                 <AlertDescription className="text-red-200 text-sm">
-                    {airdropError.includes('faucet.solana.com') ? (
-                      <div className="space-y-2">
-                        <p>{airdropError.replace(/https:\/\/faucet\.solana\.com/g, '').trim()}</p>
+                    <div className="space-y-3">
+                      <div className="flex items-start gap-2">
+                        <svg
+                          className="w-4 h-4 mt-0.5 flex-shrink-0"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                        <span className="flex-1">{formatErrorMessage(airdropError)}</span>
+                      </div>
+                      {airdropToken === 'SOL' && (
                         <a
                           href="https://faucet.solana.com"
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-blue-300 hover:text-blue-200 underline text-xs"
+                          className="flex items-center gap-2 text-blue-300 hover:text-blue-200 transition-colors group"
                         >
-                          Visit Solana Faucet →
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                            />
+                          </svg>
+                          <span className="text-xs underline group-hover:no-underline">
+                            Explore Solana Faucet
+                          </span>
                         </a>
-                      </div>
-                    ) : (
-                      airdropError
-                    )}
+                      )}
+                    </div>
                 </AlertDescription>
               </Alert>
             )}
@@ -568,9 +692,38 @@ export default function DashboardPage() {
             )}
 
               <div className="mt-2 bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-blue-200 text-xs shadow-[0_12px_28px_-16px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl">
+                <div className="space-y-2">
+                  <p>
                 💡 {airdropToken === 'SOL' 
                   ? 'SOL airdrop requests tokens directly from Solana devnet faucet. Tokens will arrive in a few seconds.'
                   : 'USDC airdrop opens Circle Faucet website in a new tab. You can request 1 USDC every 2 hours per address. Complete the request on the Circle Faucet page.'}
+                  </p>
+                  {airdropToken === 'SOL' && (
+                    <a
+                      href="https://faucet.solana.com"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-blue-300 hover:text-blue-200 transition-colors group mt-2"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                        />
+                      </svg>
+                      <span className="text-xs underline group-hover:no-underline">
+                        Explore Solana Faucet
+                      </span>
+                    </a>
+                  )}
+                </div>
               </div>
             </div>
           </Card>
@@ -630,6 +783,35 @@ export default function DashboardPage() {
                 </p>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Network selector */}
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-gray-400">Network</span>
+                  <div className="inline-flex rounded-full bg-gray-800/70 p-1 border border-gray-700/70">
+                    <button
+                      type="button"
+                      onClick={() => setNetwork('mainnet')}
+                      className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                        network === 'mainnet'
+                          ? 'bg-white text-black font-semibold'
+                          : 'text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      MAINNET
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNetwork('devnet')}
+                      className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                        network === 'devnet'
+                          ? 'bg-[#7857ff] text-white font-semibold'
+                          : 'text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      DEVNET
+                    </button>
+                  </div>
+                </div>
+
                 <Button
                   onClick={handleLogin}
                   disabled={loginLoading}
@@ -642,7 +824,22 @@ export default function DashboardPage() {
                 {loginError && (
                   <Alert variant="destructive" className="bg-red-900/50 border-red-500">
                     <AlertDescription className="text-red-200 text-sm">
-                      {loginError}
+                      <div className="flex items-start gap-2">
+                        <svg
+                          className="w-4 h-4 mt-0.5 flex-shrink-0"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                        <span className="flex-1">{formatErrorMessage(loginError)}</span>
+                      </div>
                     </AlertDescription>
                   </Alert>
                 )}
@@ -671,7 +868,7 @@ export default function DashboardPage() {
         className="pointer-events-none absolute inset-0 opacity-[0.06] mix-blend-soft-light"
         style={{ backgroundImage: 'url("https://grainy-gradients.vercel.app/noise.svg")' }}
       />
-      {/* Floating Logout Icon over marquee (desktop) */}
+      {/* Logout Icon over marquee (desktop) */}
       <button
         onClick={handleLogout}
         className="absolute top-6 left-6 z-30 hidden lg:inline-flex rounded-full p-3 bg-black/70 border border-white/25 hover:bg-black/85 transition"
@@ -720,8 +917,9 @@ export default function DashboardPage() {
               usdcBalanceText={usdcBalanceText}
               className="w-full lg:max-w-3xl lg:flex-[2]"
               onExploreClick={() => {
+                const cluster = network === 'devnet' ? '?cluster=devnet' : '';
                 window.open(
-                  `https://explorer.solana.com/address/${pubkey}?cluster=devnet`,
+                  `https://explorer.solana.com/address/${pubkey}${cluster}`,
                   '_blank'
                 );
               }}
@@ -795,9 +993,10 @@ export default function DashboardPage() {
           {/* Mobile: Marquee at bottom in flow, reduced height */}
           <div className="lg:hidden relative w-full h-28">
             {/* Mobile Logout Icon (right aligned) */}
+            <div className="absolute top-2 right-2 z-30 flex items-center gap-2">
             <button
               onClick={handleLogout}
-              className="absolute top-2 right-2 z-30 rounded-full p-3 bg-black/70 border border-white/25 hover:bg-black/85 transition"
+                className="rounded-full p-3 bg-black/70 border border-white/25 hover:bg-black/85 transition"
               title="Logout"
             >
               <svg
@@ -814,6 +1013,7 @@ export default function DashboardPage() {
                 />
               </svg>
             </button>
+            </div>
             <div className="absolute inset-0">
               <div className="absolute left-0 top-0 w-10 h-full bg-gradient-to-r from-black to-transparent z-10" />
               <div className="absolute right-0 top-0 w-10 h-full bg-gradient-to-l from-black to-transparent z-10" />

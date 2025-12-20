@@ -1,18 +1,11 @@
 // Polyfills are already imported in index.js before expo-router/entry
 import { Stack } from 'expo-router';
-import { LazorProvider, initMobileStorage } from '@lazor-starter/core';
+import { LazorKitProvider } from '@lazorkit/wallet-mobile-adapter';
+import { initMobileStorage, useNetworkStore } from '@lazor-starter/core';
 import { StatusBar } from 'expo-status-bar';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Linking from 'expo-linking';
-import { useEffect, useState } from 'react';
-import { PortalWebView } from '../src/components/PortalWebView';
-import { webViewManager } from '../src/utils/webViewManager';
-import { useMobilePasskey } from '../src/hooks/useMobilePasskey';
-
-// Export mobile passkey hook factory to global so useLazorAuth can access it
-// This allows useLazorAuth to call the hook when needed
-(global as any).__useMobilePasskeyHook = useMobilePasskey;
 
 // CRITICAL: Initialize AsyncStorage for localStorage polyfill
 // This must be done before any other code that uses localStorage
@@ -40,109 +33,71 @@ if (typeof (global as any).__setAsyncStorageForLocalStorage === 'function') {
 // Initialize mobile storage for our custom storage utility
 initMobileStorage(AsyncStorage);
 
-// Inject API base URL for mobile (to avoid importing expo-constants in shared code)
+// Inject API base URL and RPC URLs for mobile (to avoid importing expo-constants in shared code)
 const extra = Constants.expoConfig?.extra || {};
-(global as any).__LAZOR_MOBILE_API_BASE__ = extra.apiBaseUrl || 'http://localhost:3001';
+(global as any).__LAZOR_MOBILE_API_BASE__ = extra.apiBaseUrl || '';
+(global as any).__LAZOR_MOBILE_RPC_URL_MAIN__ = extra.lazorkitRpcUrlMain || '';
+(global as any).__LAZOR_MOBILE_RPC_URL_DEV__ = extra.lazorkitRpcUrlDev || '';
+(global as any).__LAZOR_MOBILE_PAYMASTER_URL_MAIN__ = extra.lazorkitPaymasterUrlMain || '';
+(global as any).__LAZOR_MOBILE_PAYMASTER_URL_DEV__ = extra.lazorkitPaymasterUrlDev || '';
+(global as any).__LAZOR_MOBILE_PORTAL_URL__ = extra.lazorkitPortalUrl || '';
 
+// Inject redirectUrl for mobile deep linking
+const scheme = Constants.expoConfig?.scheme || 'lazor-starter';
+(global as any).__LAZOR_MOBILE_REDIRECT_URL = `${scheme}://home`;
+
+/**
+ * Root layout component for the mobile app
+ * 
+ * Wraps the app with LazorKitProvider and sets up deep linking for portal callbacks.
+ * Reads configuration from environment variables via Constants.expoConfig.extra.
+ * 
+ * @returns Root layout component
+ */
 export default function RootLayout() {
-  // Read env from Constants.expoConfig.extra or process.env
   const extra = Constants.expoConfig?.extra || {};
-  const rpcUrl = extra.lazorkitRpcUrl || process.env.NEXT_PUBLIC_LAZORKIT_RPC_URL;
-  const paymasterUrl = extra.lazorkitPaymasterUrl || process.env.NEXT_PUBLIC_LAZORKIT_PAYMASTER_URL;
-  const ipfsUrl = extra.lazorkitPortalUrl || process.env.NEXT_PUBLIC_LAZORKIT_PORTAL_URL;
+  const { network } = useNetworkStore();
 
-  // State for WebView modal
-  const [webViewVisible, setWebViewVisible] = useState(false);
-  const [webViewUrl, setWebViewUrl] = useState('');
+  const rpcUrl =
+    network === 'devnet'
+      ? extra.lazorkitRpcUrlDev || process.env.NEXT_PUBLIC_LAZORKIT_RPC_URL_DEVNET || ''
+      : extra.lazorkitRpcUrlMain || process.env.NEXT_PUBLIC_LAZORKIT_RPC_URL || '';
 
-  // Register WebViewManager callbacks and make it globally available
-  useEffect(() => {
-    webViewManager.registerCallbacks(setWebViewVisible, setWebViewUrl);
-    // Make webViewManager globally available for polyfills
-    (global as any).__webViewManager = webViewManager;
-  }, []);
+  const portalUrl = extra.lazorkitPortalUrl || process.env.NEXT_PUBLIC_LAZORKIT_PORTAL_URL || '';
 
-  // Handle deep linking for portal callbacks
-  useEffect(() => {
-    const handleDeepLink = (event: { url: string }) => {
-      console.log('🔗 Deep link received:', event.url);
-      
-      // Try to extract message data from URL
-      try {
-        const url = new URL(event.url);
-        const messageData = url.searchParams.get('data') || url.hash.substring(1);
-        
-        if (messageData) {
-          // Forward message to WebViewManager
-          webViewManager.handleMessage({ data: messageData, origin: url.origin });
-        }
-      } catch (e) {
-        console.error('Failed to parse deep link:', e);
-      }
-    };
+  const paymasterUrl =
+    network === 'devnet'
+      ? extra.lazorkitPaymasterUrlDev || process.env.NEXT_PUBLIC_LAZORKIT_PAYMASTER_URL_DEVNET || ''
+      : extra.lazorkitPaymasterUrlMain || process.env.NEXT_PUBLIC_LAZORKIT_PAYMASTER_URL || '';
 
-    // Listen for deep links
-    const subscription = Linking.addEventListener('url', handleDeepLink);
-
-    // Check if app was opened via deep link
-    Linking.getInitialURL().then((url) => {
-      if (url) {
-        handleDeepLink({ url });
-      }
-    });
-
-    return () => {
-      subscription.remove();
-    };
-  }, []);
-
-  const handleWebViewMessage = (message: any) => {
-    console.log('📨 WebView message received:', message);
-    webViewManager.handleMessage(message);
-  };
-
-  const handleWebViewClose = () => {
-    console.log('🔒 WebView closed');
-    webViewManager.close();
-  };
+  if (!rpcUrl) {
+    console.error('Missing NEXT_PUBLIC_LAZORKIT_RPC_URL. Please set it in .env.local');
+  }
+  if (!portalUrl) {
+    console.error('Missing NEXT_PUBLIC_LAZORKIT_PORTAL_URL. Please set it in .env.local');
+  }
+  if (!paymasterUrl) {
+    console.error('Missing NEXT_PUBLIC_LAZORKIT_PAYMASTER_URL. Please set it in .env.local');
+  }
 
   return (
-    <LazorProvider rpcUrl={rpcUrl} paymasterUrl={paymasterUrl} ipfsUrl={ipfsUrl}>
+    <LazorKitProvider
+      rpcUrl={rpcUrl}
+      portalUrl={portalUrl}
+      configPaymaster={{
+        paymasterUrl,
+      }}
+    >
       <StatusBar style="light" />
       <Stack
         screenOptions={{
-          headerStyle: {
-            backgroundColor: '#000000',
-          },
-          headerTintColor: '#fff',
-          headerTitleStyle: {
-            fontWeight: 'bold',
-          },
+          headerShown: false,
         }}
       >
-        <Stack.Screen 
-          name="index" 
-          options={{ 
-            title: 'Lazor Starter',
-            headerShown: false,
-          }} 
-        />
-        <Stack.Screen 
-          name="dashboard" 
-          options={{ 
-            title: 'Dashboard',
-          }} 
-        />
+        <Stack.Screen name="index" options={{ title: 'Lazor Starter' }} />
+        <Stack.Screen name="dashboard" options={{ title: 'Dashboard' }} />
       </Stack>
-      
-      {/* WebView Modal for portal */}
-      <PortalWebView
-        visible={webViewVisible}
-        url={webViewUrl}
-        onMessage={handleWebViewMessage}
-        onClose={handleWebViewClose}
-      />
-    </LazorProvider>
+    </LazorKitProvider>
   );
 }
 

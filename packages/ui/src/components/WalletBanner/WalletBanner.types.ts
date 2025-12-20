@@ -30,5 +30,9 @@ export interface WalletBannerProps {
    * Callback when explore icon is clicked
    */
   onExploreClick?: () => void;
+  /**
+   * Current network (mainnet/devnet)
+   */
+  network?: 'mainnet' | 'devnet';
 }
 

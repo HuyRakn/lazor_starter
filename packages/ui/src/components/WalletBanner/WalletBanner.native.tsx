@@ -1,7 +1,13 @@
 'use client';
 
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ImageBackground } from 'react-native';
+import { Copy, ExternalLink, Wifi } from 'lucide-react-native';
+import * as Clipboard from 'expo-clipboard';
 import type { WalletBannerProps } from './WalletBanner.types';
+
+// Reuse the same banner artwork as web version so both platforms share a single source.
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const walletBannerImage = require('../../../../../apps/web/public/images/wallet-banner.jpg');
 
 /**
  * Formats wallet address for display
@@ -47,18 +53,40 @@ function formatBalance(balance: number | undefined, decimals: number = 2): strin
 export function WalletBanner({
   walletAddress,
   solBalance,
+  solBalanceText,
   usdcBalance,
+  usdcBalanceText,
   onExploreClick,
+  network = 'mainnet',
 }: WalletBannerProps) {
   const formattedAddress = formatWalletAddress(walletAddress);
-  const formattedSolBalance = formatBalance(solBalance);
-  const formattedUsdcBalance = formatBalance(usdcBalance);
 
-  const content = (
-    <View style={styles.container}>
-      {/* Background with gradient overlay */}
-      <View style={styles.backgroundOverlay} />
+  /**
+   * Matches web behavior: prefer *_Text strings (exact on-chain values),
+   * and fall back to numeric balances when strings are not provided.
+   */
+  const resolveBalanceString = (
+    textValue?: string,
+    numericValue?: number,
+    decimals: number = 2,
+  ): string => {
+    if (textValue && textValue.trim().length > 0) {
+      const [intPart, decPart] = textValue.split('.');
+      const withSeparators = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      return decPart ? `${withSeparators}.${decPart}` : withSeparators;
+    }
+    return formatBalance(numericValue, decimals);
+  };
 
+  const formattedSolBalance = resolveBalanceString(solBalanceText, solBalance, 8);
+  const formattedUsdcBalance = resolveBalanceString(usdcBalanceText, usdcBalance, 2);
+
+  return (
+    <ImageBackground
+      source={walletBannerImage}
+      style={styles.container}
+      imageStyle={styles.imageBackground}
+    >
       {/* Content */}
       <View style={styles.content}>
         {/* Top Section */}
@@ -70,31 +98,31 @@ export function WalletBanner({
               <Text style={styles.addressText} numberOfLines={1}>
                 {formattedAddress}
               </Text>
-              {/* Copy Icon - simplified for native */}
+              {/* Copy Icon */}
               <TouchableOpacity
                 onPress={async () => {
-                  // Copy functionality would be implemented here
-                  // For now, just a placeholder
+                  try {
+                    await Clipboard.setStringAsync(walletAddress);
+                  } catch (error) {
+                    console.error('Failed to copy address:', error);
+                  }
                 }}
                 style={styles.iconButton}
               >
-                <Text style={styles.iconText}>📋</Text>
+                <Copy size={16} color="#E5E7EB" />
               </TouchableOpacity>
               {/* Explore Icon */}
-              <TouchableOpacity
-                onPress={onExploreClick}
-                style={styles.iconButton}
-              >
-                <Text style={styles.iconText}>🔍</Text>
+              <TouchableOpacity onPress={onExploreClick} style={styles.iconButton}>
+                <ExternalLink size={16} color="#E5E7EB" />
               </TouchableOpacity>
             </View>
           </View>
 
-          {/* Right Side - Lazorkit Logo */}
-          <Text style={styles.lazorkitLogo}>Lazorkit</Text>
+          {/* Right Side - LazorKit Logo */}
+          <Text style={styles.lazorkitLogo}>LazorKit</Text>
         </View>
 
-        {/* Balance Section - Responsive: single column on mobile */}
+        {/* Balance Section - single column on mobile (like compact web version) */}
         <View style={styles.balanceContainer}>
           {/* SOL Balance */}
           <View style={styles.balanceItem}>
@@ -114,26 +142,36 @@ export function WalletBanner({
             </Text>
           </View>
         </View>
-      </View>
-    </View>
-  );
 
-  return content;
+        {/* Network Indicator - Bottom Right */}
+        <View style={styles.networkIndicator}>
+          <Wifi size={12} color="#22C55E" />
+          <Text style={styles.networkText}>
+            {network === 'devnet' ? 'Devnet' : 'Mainnet'}
+          </Text>
+        </View>
+      </View>
+    </ImageBackground>
+  );
 }
 
 const styles = StyleSheet.create({
   container: {
     position: 'relative',
-    overflow: 'hidden',
     borderRadius: 16,
-    backgroundColor: '#111827',
+    overflow: 'hidden',
+    backgroundColor: '#020617',
     borderWidth: 1,
-    borderColor: 'rgba(55, 65, 81, 0.3)',
+    borderColor: 'rgba(55, 65, 81, 0.6)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+  },
+  imageBackground: {
+    borderRadius: 16,
+    resizeMode: 'cover',
   },
   backgroundOverlay: {
     position: 'absolute',
@@ -141,8 +179,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#111827',
-    opacity: 0.9,
+    // Subtle overlay similar to web gradient for readability
+    backgroundColor: 'rgba(15, 23, 42, 0.75)',
   },
   content: {
     position: 'relative',
@@ -170,17 +208,17 @@ const styles = StyleSheet.create({
   addressRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 2,
   },
   addressText: {
-    flex: 1,
     fontSize: 14,
     fontFamily: 'monospace',
     fontWeight: '500',
     color: '#ffffff',
+    marginRight: 4,
   },
   iconButton: {
-    padding: 4,
+    padding: 2,
   },
   iconText: {
     fontSize: 16,
@@ -213,5 +251,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'normal',
     color: '#d1d5db',
+  },
+  networkIndicator: {
+    position: 'absolute',
+    bottom: 12,
+    right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  networkText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#22C55E',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });

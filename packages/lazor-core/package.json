@@ -1,6 +1,7 @@
 {
     "name": "@lazor-starter/core",
     "version": "1.0.0",
+    "license": "SEE LICENSE IN LICENSE",
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "exports": {
@@ -18,7 +19,7 @@
       "clean": "rm -rf dist"
     },
     "dependencies": {
-      "@lazorkit/wallet": "1.8.4",
+      "@lazorkit/wallet": "2.0.1",
       "@solana/wallet-adapter-base": "^0.9.27",
       "@solana/wallet-standard-features": "^1.0.0",
       "@wallet-standard/base": "^1.1.0",

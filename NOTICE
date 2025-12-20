@@ -1,0 +1,41 @@
+Lazor Starter - Universal Lazorkit SDK Starter
+
+Copyright (c) 2025 Lazor Starter
+
+This project is licensed under a custom license. Please see the LICENSE file for
+full terms and conditions.
+
+IMPORTANT NOTICES:
+
+1. COMPETITION RESTRICTION:
+   This codebase is submitted for the "Lazorkit SDK Integration Bounty 2025".
+   You may NOT use this work, in whole or substantial part, as a submission for
+   the same or similar competitive events.
+
+2. ATTRIBUTION:
+   If you use, modify, or distribute this work, you MUST provide proper attribution
+   including:
+   - Original copyright notice
+   - Link to the original repository
+   - Clear indication that your work is based on this work
+
+3. PERMITTED USES:
+   - Study and learn from the code
+   - Use as a reference for your own projects
+   - Fork for educational purposes
+   - Create derivative works for non-competitive purposes
+   - Contribute improvements back
+
+4. THIRD-PARTY COMPONENTS:
+   This project includes third-party components subject to their own licenses:
+   - @lazorkit/wallet (Lazorkit SDK License)
+   - Radix UI components (MIT License)
+   - React Native primitives (MIT License)
+   - Solana Web3.js (Apache 2.0 License)
+   - And other dependencies (see package.json files)
+
+   You are responsible for ensuring compliance with all applicable licenses.
+
+For questions or special permission requests, please contact the repository
+maintainers through the official repository.
+

@@ -1,0 +1,234 @@
+# Tutorial 1: Setup and Configuration
+
+This tutorial will guide you through setting up the Lazor Starter project for both **Web (Next.js)** and **Mobile (Expo/React Native)** platforms.
+
+## Prerequisites
+
+- **Node.js** 18+ installed
+- **pnpm** 8+ installed
+- **iOS Simulator** or **Android Emulator** (for mobile development)
+- **Expo Go** app on your phone (for testing mobile app)
+
+## Step 1: Clone and Install
+
+```bash
+# Clone the repository
+git clone <your-repo-url>
+cd lazor-starter
+
+# Install all dependencies
+pnpm install
+```
+
+## Step 2: Environment Configuration
+
+Create a `.env.local` file in the **root directory** (not in apps/web or apps/mobile):
+
+```env
+# ===== MAINNET (PUBLIC) =====
+NEXT_PUBLIC_LAZORKIT_RPC_URL=https://mainnet.helius-rpc.com/?api-key=47712b7a-ea63-49b8-9685-dff77d9eb55a
+NEXT_PUBLIC_LAZORKIT_PORTAL_URL=https://portal.lazor.sh
+NEXT_PUBLIC_LAZORKIT_PAYMASTER_URL=https://kora.lazorkit.com
+NEXT_PUBLIC_LAZORKIT_API_KEY=kora_live_api_cfa755da42cf3026291a5069e74ff37f3514d06400059c4408a20738e334df1d
+
+# ===== DEVNET (PUBLIC) =====
+NEXT_PUBLIC_LAZORKIT_RPC_URL_DEVNET=https://devnet.helius-rpc.com/?api-key=47712b7a-ea63-49b8-9685-dff77d9eb55a
+NEXT_PUBLIC_LAZORKIT_PORTAL_URL_DEVNET=https://portal.lazor.sh
+NEXT_PUBLIC_LAZORKIT_PAYMASTER_URL_DEVNET=https://kora.devnet.lazorkit.com
+
+# ===== Backend API (Optional - for smart wallet creation) =====
+NEXT_PUBLIC_API_BASE_URL=http://localhost:3001
+```
+
+**Important Notes:**
+- All environment variables use `NEXT_PUBLIC_` prefix for client-side access
+- Mobile app reads from the same `.env.local` file via `app.config.js`
+- Both Web and Mobile share the same configuration
+
+## Step 3: Build Core Package
+
+Before running the apps, build the shared core package:
+
+```bash
+# From root directory
+cd packages/lazor-core
+pnpm build
+cd ../..
+```
+
+## Step 4: Web Setup (Next.js)
+
+### 4.1 Provider Configuration
+
+The Web app uses `WalletProviderWrapper` which automatically configures the Lazorkit SDK:
+
+**File: `apps/web/app/layout.tsx`**
+
+```tsx
+import { WalletProviderWrapper } from '../components/WalletProviderWrapper';
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en">
+      <body>
+        <WalletProviderWrapper>
+          {children}
+        </WalletProviderWrapper>
+      </body>
+    </html>
+  );
+}
+```
+
+The `WalletProviderWrapper` component:
+- Automatically loads environment variables
+- Configures RPC URL based on selected network (mainnet/devnet)
+- Sets up Paymaster URL for gasless transactions
+- Handles Buffer polyfills for Solana Web3.js
+
+### 4.2 Run Web App
+
+```bash
+# From root directory
+pnpm dev
+
+# Or from apps/web
+cd apps/web
+pnpm dev
+```
+
+Web app will be available at: **http://localhost:3000**
+
+## Step 5: Mobile Setup (Expo)
+
+### 5.1 Provider Configuration
+
+The Mobile app uses `LazorKitProvider` from `@lazorkit/wallet-mobile-adapter`:
+
+**File: `apps/mobile/app/_layout.tsx`**
+
+```tsx
+import { LazorKitProvider } from '@lazorkit/wallet-mobile-adapter';
+import { useNetworkStore } from '@lazor-starter/core';
+import Constants from 'expo-constants';
+
+export default function RootLayout() {
+  const { network } = useNetworkStore();
+  const extra = Constants.expoConfig?.extra || {};
+  
+  const rpcUrl = network === 'devnet' 
+    ? extra.lazorkitRpcUrlDev 
+    : extra.lazorkitRpcUrlMain;
+    
+  const paymasterUrl = network === 'devnet'
+    ? extra.lazorkitPaymasterUrlDev
+    : extra.lazorkitPaymasterUrlMain;
+    
+  const portalUrl = extra.lazorkitPortalUrl;
+
+  return (
+    <LazorKitProvider
+      rpcUrl={rpcUrl}
+      portalUrl={portalUrl}
+      configPaymaster={{ paymasterUrl }}
+    >
+      {/* Your app screens */}
+    </LazorKitProvider>
+  );
+}
+```
+
+### 5.2 Polyfills Setup
+
+Mobile requires polyfills for Solana Web3.js. These are automatically loaded in `apps/mobile/src/polyfills.ts`:
+
+- **Buffer** polyfill
+- **WebSocket** polyfill
+- **crypto** polyfill (using expo-crypto)
+- **localStorage** polyfill (using AsyncStorage)
+- **window** object polyfill
+
+**File: `apps/mobile/index.js`**
+
+```javascript
+// CRITICAL: Import polyfills FIRST
+import './src/polyfills';
+
+// Then import the app
+import 'expo-router/entry';
+```
+
+### 5.3 Storage Initialization
+
+Mobile uses AsyncStorage for persistent storage. Initialize it in `_layout.tsx`:
+
+```tsx
+import { initMobileStorage } from '@lazor-starter/core';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// Initialize storage
+initMobileStorage(AsyncStorage);
+```
+
+### 5.4 Run Mobile App
+
+```bash
+# From root directory
+cd apps/mobile
+pnpm dev
+
+# Or use Expo CLI
+npx expo start
+```
+
+Scan the QR code with **Expo Go** app on your phone, or press `i` for iOS Simulator / `a` for Android Emulator.
+
+## Step 6: Verify Setup
+
+### Web Verification
+
+1. Open http://localhost:3000
+2. Check browser console for any errors
+3. You should see the login screen
+
+### Mobile Verification
+
+1. Open Expo Go app
+2. Scan QR code or connect to development server
+3. App should load without errors
+4. You should see the login screen
+
+## Troubleshooting
+
+### "Missing environment variables"
+
+- Ensure `.env.local` is in the **root directory**
+- Check that all `NEXT_PUBLIC_*` variables are set
+- Restart the development server after changing `.env.local`
+
+### "Buffer is not defined" (Web)
+
+- Ensure `WalletProviderWrapper` is wrapping your app
+- Check that `buffer` package is installed: `pnpm add buffer`
+
+### "Polyfills not loaded" (Mobile)
+
+- Ensure `polyfills.ts` is imported **first** in `index.js`
+- Check that all polyfill packages are installed:
+  ```bash
+  pnpm add react-native-get-random-values react-native-url-polyfill text-encoding-polyfill
+  ```
+
+### "AsyncStorage not working" (Mobile)
+
+- Ensure `@react-native-async-storage/async-storage` is installed
+- Check that `initMobileStorage()` is called in `_layout.tsx`
+
+## Next Steps
+
+- ✅ Environment configured
+- ✅ Web app running
+- ✅ Mobile app running
+
+**Ready for [Tutorial 2: Passkey Authentication](./tutorial-2-passkey-authentication.md)?** 🚀
+

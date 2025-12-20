@@ -258,18 +258,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // CRITICAL: Always use devnet RPC for this starter
-    // This ensures 100% onchain devnet, no mocks
+    const requestedNetwork = requestBody?.network === 'devnet' ? 'devnet' : 'mainnet';
     const rpcUrl =
-      process.env.RPC_URL ||
+      requestedNetwork === 'devnet'
+        ? process.env.NEXT_PUBLIC_LAZORKIT_RPC_URL_DEVNET
+        : process.env.NEXT_PUBLIC_LAZORKIT_RPC_URL ||
       process.env.LAZORKIT_RPC_URL ||
-      'https://api.devnet.solana.com'; // Default to devnet
-    
-    // Validate RPC URL is devnet (safety check)
-    if (!rpcUrl.includes('devnet') && !rpcUrl.includes('localhost')) {
-      console.warn(
-        '⚠️ WARNING: RPC URL does not appear to be devnet. This starter is designed for devnet only.',
-        { rpcUrl }
+          process.env.RPC_URL ||
+          '';
+
+    if (!rpcUrl) {
+      console.error('❌ Missing Lazorkit RPC URL (NEXT_PUBLIC_LAZORKIT_RPC_URL / LAZORKIT_RPC_URL / RPC_URL).');
+      return NextResponse.json(
+        {
+          error: 'Missing RPC URL',
+          hint: requestedNetwork === 'devnet'
+            ? 'Set NEXT_PUBLIC_LAZORKIT_RPC_URL_DEVNET or LAZORKIT_RPC_URL_DEVNET.'
+            : 'Set NEXT_PUBLIC_LAZORKIT_RPC_URL to your mainnet RPC (e.g. Helius).',
+        },
+        { status: 500 }
       );
     }
     

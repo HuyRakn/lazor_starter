@@ -16,9 +16,17 @@ export default {
       backgroundColor: '#000000',
     },
     assetBundlePatterns: ['**/*'],
+    scheme: 'lazor-starter',
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.lazorstarter.app',
+      infoPlist: {
+        CFBundleURLTypes: [
+          {
+            CFBundleURLSchemes: ['lazor-starter'],
+          },
+        ],
+      },
     },
     android: {
       adaptiveIcon: {
@@ -26,25 +34,36 @@ export default {
         backgroundColor: '#000000',
       },
       package: 'com.lazorstarter.app',
+      intentFilters: [
+        {
+          action: 'VIEW',
+          autoVerify: true,
+          data: [
+            {
+              scheme: 'lazor-starter',
+            },
+          ],
+          category: ['BROWSABLE', 'DEFAULT'],
+        },
+      ],
     },
     web: {
       favicon: './assets/favicon.png',
     },
-    scheme: 'lazor-starter',
     plugins: ['expo-router'],
     extra: {
-      // These will be available via Constants.expoConfig.extra
-      lazorkitRpcUrl:
-        process.env.NEXT_PUBLIC_LAZORKIT_RPC_URL ||
-        'https://api.devnet.solana.com',
-      lazorkitPaymasterUrl:
-        process.env.NEXT_PUBLIC_LAZORKIT_PAYMASTER_URL ||
-        'https://kora.devnet.lazorkit.com/',
+      // Mainnet configuration
+      lazorkitRpcUrlMain: process.env.NEXT_PUBLIC_LAZORKIT_RPC_URL || '',
+      lazorkitPaymasterUrlMain: process.env.NEXT_PUBLIC_LAZORKIT_PAYMASTER_URL || '',
+      // Devnet configuration
+      lazorkitRpcUrlDev: process.env.NEXT_PUBLIC_LAZORKIT_RPC_URL_DEVNET || '',
+      lazorkitPaymasterUrlDev: process.env.NEXT_PUBLIC_LAZORKIT_PAYMASTER_URL_DEVNET || '',
+      // Portal is the same for both networks
       lazorkitPortalUrl:
         process.env.NEXT_PUBLIC_LAZORKIT_PORTAL_URL ||
-        'https://portal.lazor.sh',
-      apiBaseUrl:
-        process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001',
+        process.env.NEXT_PUBLIC_LAZORKIT_PORTAL_URL_DEVNET ||
+        '',
+      apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || '',
     },
   },
 };

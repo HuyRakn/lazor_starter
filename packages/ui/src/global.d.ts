@@ -32,3 +32,9 @@ declare module 'lucide-react-native' {
   }
 }
 
+// Minimal type declarations for expo-clipboard used in native components.
+// Thư viện thật được cung cấp bởi app mobile (Expo), core UI chỉ cần biết shape cơ bản.
+declare module 'expo-clipboard' {
+  export function setStringAsync(text: string): Promise<void>;
+}
+

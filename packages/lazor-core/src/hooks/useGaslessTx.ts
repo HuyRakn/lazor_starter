@@ -1,9 +1,10 @@
 'use client';
 
 import { useCallback } from 'react';
-import { useLazorWallet } from './useLazorWallet';
-import { useLazorAuth } from './useLazorAuth';
-import { TransactionInstruction, SystemProgram, PublicKey, Connection, Transaction } from '@solana/web3.js';
+import { useWallet } from './useWallet';
+import { useAuth } from './useAuth';
+import { TransactionInstruction, SystemProgram, PublicKey } from '@solana/web3.js';
+import { useNetworkStore } from '../state/networkStore';
 import {
   getAssociatedTokenAddressSync,
   createTransferInstruction,
@@ -21,11 +22,14 @@ import type { GaslessTxOptions } from '../types';
  * @returns {(recipient: string, amount: number, tokenMint: string, decimals?: number, options?: GaslessTxOptions) => Promise<string>} returns.transferSPLToken - Transfer SPL tokens (USDC, etc.)
  */
 export function useGaslessTx() {
-  const wallet = useLazorWallet();
-  const { pubkey, isLoggedIn } = useLazorAuth();
+  const wallet = useWallet();
+  const { pubkey, isLoggedIn } = useAuth();
+  const network = useNetworkStore((state) => state.network);
 
   /**
    * Sends a transaction with multiple instructions through Lazorkit Paymaster
+   *
+   * Uses Lazorkit SDK v2.0.0 API: signAndSendTransaction({ instructions, transactionOptions })
    *
    * @param instructions - Array of transaction instructions to execute
    * @param options - Optional gasless transaction options
@@ -45,7 +49,12 @@ export function useGaslessTx() {
         throw new Error('No instructions provided for transaction');
       }
       
-      // Get wallet address first
+      for (const ix of instructions) {
+        if (!ix || !ix.programId) {
+          throw new Error('Invalid instruction provided');
+        }
+      }
+      
       const activeAddress = 
         pubkey || 
         (wallet as any)?.smartWallet || 
@@ -57,65 +66,32 @@ export function useGaslessTx() {
         throw new Error('No wallet address. Please login first.');
       }
       
-      // Validate PublicKey before creating transaction
-      let feePayer: PublicKey;
       try {
-        feePayer = new PublicKey(activeAddress);
+        new PublicKey(activeAddress);
       } catch (error) {
         throw new Error(`Invalid wallet address: ${activeAddress}`);
       }
       
-      // Get recent blockhash and create Transaction object
-      const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || 
-                     process.env.NEXT_PUBLIC_LAZORKIT_RPC_URL ||
-                     'https://api.devnet.solana.com';
-      const connection = new Connection(rpcUrl, 'confirmed');
+      const transactionOptions: {
+        feeToken?: string;
+        computeUnitLimit?: number;
+        clusterSimulation?: 'devnet' | 'mainnet';
+      } = {};
       
-      let blockhash: string;
-      try {
-        const latestBlockhash = await connection.getLatestBlockhash('confirmed');
-        blockhash = latestBlockhash.blockhash;
-      } catch (error) {
-        throw new Error('Failed to get recent blockhash. Please check your RPC connection.');
+      if (options?.feeToken) {
+        transactionOptions.feeToken = options.feeToken;
       }
       
-      // Create transaction and add instructions
-      const transaction = new Transaction();
-      
-      // Set blockhash and fee payer
-      transaction.recentBlockhash = blockhash;
-      transaction.feePayer = feePayer;
-      
-      // Add all instructions to transaction
-      for (const ix of instructions) {
-        if (!ix || !ix.programId) {
-          throw new Error('Invalid instruction provided');
-        }
-        transaction.add(ix);
+      if (options?.computeUnitLimit) {
+        transactionOptions.computeUnitLimit = options.computeUnitLimit;
       }
       
-      // Validate transaction before sending
-      if (!transaction.recentBlockhash || transaction.recentBlockhash.length === 0) {
-        throw new Error('Transaction missing recent blockhash');
-      }
-      if (!transaction.feePayer) {
-        throw new Error('Transaction missing fee payer');
-      }
-      if (transaction.instructions.length === 0) {
-        throw new Error('Transaction has no instructions');
-      }
-      
-      // Pass transaction directly to signAndSendTransaction
-      // Lazorkit SDK should accept Transaction object
-      // If SDK only accepts single instruction, we'll need to handle multiple instructions differently
-      if (instructions.length === 1) {
-        // If only one instruction, pass it directly
-        return await wallet.signAndSendTransaction(instructions[0]);
-      } else {
-        // For multiple instructions, pass the transaction object
-        // SDK might accept Transaction object even if type says otherwise
-        return await wallet.signAndSendTransaction(transaction as any);
-      }
+      transactionOptions.clusterSimulation = network;
+
+      return await wallet.signAndSendTransaction({
+        instructions,
+        transactionOptions,
+      });
     };
 
     try {
@@ -132,7 +108,7 @@ export function useGaslessTx() {
       if (isConnectionError && isLoggedIn && wallet?.connect && typeof wallet.connect === 'function') {
         try {
           await new Promise(resolve => setTimeout(resolve, 500));
-          await wallet.connect();
+          await wallet.connect({ feeMode: 'paymaster' });
           await new Promise(resolve => setTimeout(resolve, 500));
           return await attemptTransaction();
         } catch (connectError: any) {
@@ -142,7 +118,7 @@ export function useGaslessTx() {
       
       throw error;
     }
-  }, [wallet, isLoggedIn]);
+  }, [wallet, isLoggedIn, network]);
 
   /**
    * Transfers SOL tokens to a recipient address (gasless)
@@ -158,17 +134,23 @@ export function useGaslessTx() {
     amount: number,
     options?: GaslessTxOptions
   ): Promise<string> => {
-    const activeAddress = 
-      pubkey || 
-      (wallet as any)?.smartWallet || 
-      (wallet as any)?.smartWalletPubkey?.toBase58?.() ||
-      (wallet as any)?.address || 
-      (wallet as any)?.publicKey?.toBase58?.();
-    if (!activeAddress) {
-      throw new Error('No wallet address. Please login first.');
+    let ownerPublicKey: PublicKey;
+    
+    if ((wallet as any)?.smartWalletPubkey instanceof PublicKey) {
+      ownerPublicKey = (wallet as any).smartWalletPubkey;
+    } else {
+      const activeAddress = 
+        pubkey || 
+        (wallet as any)?.smartWallet || 
+        (wallet as any)?.smartWalletPubkey?.toBase58?.() ||
+        (wallet as any)?.address || 
+        (wallet as any)?.publicKey?.toBase58?.();
+      if (!activeAddress) {
+        throw new Error('No wallet address. Please login first.');
+      }
+      ownerPublicKey = new PublicKey(activeAddress);
     }
 
-    const ownerPublicKey = new PublicKey(activeAddress);
     const recipientPublicKey = new PublicKey(recipient);
     const lamports = Math.round(amount * 1e9);
 
@@ -199,22 +181,27 @@ export function useGaslessTx() {
     decimals: number = 6,
     options?: GaslessTxOptions
   ): Promise<string> => {
-    const activeAddress = 
-      pubkey || 
-      (wallet as any)?.smartWallet || 
-      (wallet as any)?.smartWalletPubkey?.toBase58?.() ||
-      (wallet as any)?.address || 
-      (wallet as any)?.publicKey?.toBase58?.();
-    if (!activeAddress) {
-      throw new Error('No wallet address. Please login first.');
+    let smartWalletPubkey: PublicKey;
+    
+    if ((wallet as any)?.smartWalletPubkey instanceof PublicKey) {
+      smartWalletPubkey = (wallet as any).smartWalletPubkey;
+    } else {
+      const activeAddress = 
+        pubkey || 
+        (wallet as any)?.smartWallet || 
+        (wallet as any)?.smartWalletPubkey?.toBase58?.() ||
+        (wallet as any)?.address || 
+        (wallet as any)?.publicKey?.toBase58?.();
+      if (!activeAddress) {
+        throw new Error('No wallet address. Please login first.');
+      }
+      smartWalletPubkey = new PublicKey(activeAddress);
     }
 
-    const smartWalletPubkey = new PublicKey(activeAddress);
     const recipientPublicKey = new PublicKey(recipient);
     const mintPublicKey = new PublicKey(tokenMint);
     const rawAmount = Math.round(amount * Math.pow(10, decimals));
 
-    // Get ATA for smart wallet (sender)
     const ATA = getAssociatedTokenAddressSync(
       mintPublicKey,
       smartWalletPubkey,
@@ -223,7 +210,6 @@ export function useGaslessTx() {
       ASSOCIATED_TOKEN_PROGRAM_ID
     );
 
-    // Get ATA for recipient
     const recipientATA = getAssociatedTokenAddressSync(
       mintPublicKey,
       recipientPublicKey,
@@ -232,7 +218,6 @@ export function useGaslessTx() {
       ASSOCIATED_TOKEN_PROGRAM_ID
     );
 
-    // Create transfer instruction
     const instruction = createTransferInstruction(
       ATA,
       recipientATA,
@@ -240,7 +225,6 @@ export function useGaslessTx() {
       rawAmount
     );
 
-    // Send transaction
     return await sendTransaction([instruction], options);
   }, [wallet, pubkey, sendTransaction]);
 
