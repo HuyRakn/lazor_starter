@@ -172,10 +172,6 @@ Comprehensive tutorials for both Web and Mobile:
 - **[Tutorial 3: Gasless Transactions](./docs/tutorial-3-gasless-transactions.md)** - Sending tokens without gas fees
 - **[Tutorial 4: Advanced Features](./docs/tutorial-4-advanced-features.md)** - Wallet balance, airdrops, network switching
 
-Additional guides:
-- [Quick Start Guide](./QUICK_START.md) - Quick reference
-- [Backend Setup Guide](./docs/backend-setup.md) - Backend API configuration
-
 ## 🎓 What's Inside?
 
 ### `packages/lazor-core` - The Heart of the Project
