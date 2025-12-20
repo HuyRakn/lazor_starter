@@ -52,7 +52,11 @@ export function getStorage(): StorageInterface | null {
  * @param AsyncStorage - AsyncStorage instance from @react-native-async-storage/async-storage
  * @returns void - Function does not return a value
  */
-export function initMobileStorage(AsyncStorage: any) {
+export function initMobileStorage(AsyncStorage: {
+  getItem: (key: string) => Promise<string | null>;
+  setItem: (key: string, value: string) => Promise<void>;
+  removeItem: (key: string) => Promise<void>;
+}): void {
   if (typeof window === 'undefined' || !AsyncStorage) {
     return;
   }

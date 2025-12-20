@@ -1,8 +1,8 @@
 'use client';
 
-import { LazorProvider, useNetworkStore } from '@lazor-starter/core';
+import { WalletProvider, useNetworkStore } from '@lazor-starter/core';
 
-// LazorKit React SDK polyfills – required on web
+// Lazorkit React SDK polyfills – required on web
 // Docs: https://portal.lazor.sh/docs/react/getting-started#polyfills--configuration
 // "if (typeof window !== 'undefined') { window.Buffer = window.Buffer || require('buffer').Buffer; }"
 if (typeof window !== 'undefined') {
@@ -23,12 +23,21 @@ if (typeof window !== 'undefined') {
   }
 }
 
-export function LazorProviderWrapper({ children }: { children: React.ReactNode }) {
+/**
+ * Wrapper component for WalletProvider with environment configuration
+ *
+ * Automatically configures WalletProvider with environment variables
+ * based on the selected network (mainnet/devnet).
+ *
+ * @param children - React children components
+ * @returns WalletProvider component with configured props
+ */
+export function WalletProviderWrapper({ children }: { children: React.ReactNode }) {
   const network = useNetworkStore((state) => state.network);
   const isDevnet = network === 'devnet';
 
   return (
-    <LazorProvider
+    <WalletProvider
       rpcUrl={
         isDevnet
           ? process.env.NEXT_PUBLIC_LAZORKIT_RPC_URL_DEVNET
@@ -48,7 +57,7 @@ export function LazorProviderWrapper({ children }: { children: React.ReactNode }
       network={network}
     >
       {children}
-    </LazorProvider>
+    </WalletProvider>
   );
 }
 

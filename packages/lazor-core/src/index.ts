@@ -5,19 +5,19 @@
  * across both Web (Next.js) and Mobile (Expo/React Native) apps in the monorepo.
  *
  * Usage in monorepo apps:
- *   import { LazorProvider, useLazorAuth } from '@lazor-starter/core';
+ *   import { WalletProvider, useAuth } from '@lazor-starter/core';
  */
 
 // Providers
-export { LazorProvider } from './providers/LazorProvider';
+export { WalletProvider } from './providers/WalletProvider';
 
 // State
 export { useNetworkStore } from './state/networkStore';
 export type { Network } from './state/networkStore';
 
 // Hooks
-export { useLazorWallet } from './hooks/useLazorWallet';
-export { useLazorAuth } from './hooks/useLazorAuth';
+export { useWallet } from './hooks/useWallet';
+export { useAuth } from './hooks/useAuth';
 export { useGaslessTx } from './hooks/useGaslessTx';
 export { useWalletBalance } from './hooks/useWalletBalance';
 export { useAirdrop } from './hooks/useAirdrop';

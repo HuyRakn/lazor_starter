@@ -1,6 +1,7 @@
 {
   "name": "@lazor-starter/mobile",
   "version": "1.0.0",
+  "license": "SEE LICENSE IN LICENSE",
   "main": "index.js",
   "scripts": {
     "dev": "expo start",

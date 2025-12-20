@@ -35,7 +35,7 @@ function getRedirectUrl(): string {
 /**
  * Mobile authentication hook using React Native SDK
  * 
- * Provides the same API as useLazorAuth but uses @lazorkit/wallet-mobile-adapter
+ * Provides the same API as useAuth but uses @lazorkit/wallet-mobile-adapter
  * with proper redirectUrl handling for deep linking.
  */
 export function useMobileAuth() {
@@ -103,7 +103,7 @@ export function useMobileAuth() {
         // Wallet connected but state not synced
         const passkeyData: PasskeyData = {
           credentialId: wallet.credentialId || '',
-          userId: wallet.walletDevice || 'mobile',
+          userId: 'mobile',
           publicKey: {
             x: '',
             y: '',
@@ -210,7 +210,7 @@ export function useMobileAuth() {
 
       const passkeyData: PasskeyData = {
         credentialId: connectedWallet.credentialId || '',
-        userId: connectedWallet.walletDevice || 'mobile',
+        userId: 'mobile',
         publicKey: {
           x: '',
           y: '',

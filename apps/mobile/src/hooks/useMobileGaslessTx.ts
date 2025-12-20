@@ -31,7 +31,10 @@ function getRedirectUrl(): string {
 /**
  * Mobile gasless transaction hook using React Native SDK
  * 
+ * Mobile-specific gasless transaction hook using @lazorkit/wallet-mobile-adapter
+ * 
  * Provides the same API as useGaslessTx but uses @lazorkit/wallet-mobile-adapter
+ * with proper redirectUrl handling for deep linking.
  * with proper redirectUrl handling for deep linking.
  */
 export function useMobileGaslessTx() {

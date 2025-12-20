@@ -1,7 +1,7 @@
 'use client';
 
 import {
-  useLazorAuth,
+  useAuth,
   useGaslessTx,
   useWalletBalance,
   useAirdrop,
@@ -38,7 +38,7 @@ export default function DashboardPage() {
     loginWithPasskey,
     createSmartWallet,
     passkeyData,
-  } = useLazorAuth();
+  } = useAuth();
   const { transferSOL, transferSPLToken } = useGaslessTx();
   const { requestSOLAirdrop, requestUSDCAirdrop, loading: airdropLoading } = useAirdrop();
   const { network, setNetwork } = useNetworkStore();

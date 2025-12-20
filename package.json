@@ -2,6 +2,7 @@
   "name": "lazor-starter",
   "version": "1.0.0",
   "private": true,
+  "license": "SEE LICENSE IN LICENSE",
   "description": "Production-ready Universal Monorepo Starter for Lazorkit SDK - Web & Mobile",
   "scripts": {
     "dev": "turbo run dev",

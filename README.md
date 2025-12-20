@@ -4,52 +4,81 @@
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-100%25-blue)](https://www.typescriptlang.org/)
 [![Turborepo](https://img.shields.io/badge/Turborepo-2.3.0-black)](https://turbo.build/)
-[![Solana](https://img.shields.io/badge/Solana-Devnet-purple)](https://solana.com/)
+[![Solana](https://img.shields.io/badge/Solana-Mainnet%20%7C%20Devnet-purple)](https://solana.com/)
 [![Gasless](https://img.shields.io/badge/Gasless-Enabled-green)](https://lazorkit.com/)
+[![Next.js](https://img.shields.io/badge/Next.js-15.0.3-black)](https://nextjs.org/)
+[![Expo](https://img.shields.io/badge/Expo-52-blue)](https://expo.dev/)
+[![License](https://img.shields.io/badge/License-Custom-orange)](./LICENSE)
 
-> **The Standard Setter** - A universal starter kit that demonstrates best practices for integrating Lazorkit SDK across Web and Mobile platforms.
+> **The Standard Setter** - A universal starter kit that demonstrates best practices for integrating Lazorkit SDK across Web (Next.js) and Mobile (Expo/React Native) platforms in a single monorepo.
 
 ## ✨ Why Lazor Starter?
 
 Building Web3 applications shouldn't require wrestling with complex configurations, polyfills, and platform-specific code. Lazor Starter solves this by providing:
 
-- ✅ **Universal Code Sharing** - Write once, run on Web (Next.js) and Mobile (Expo)
-- ✅ **Passkey Authentication** - Face ID / Touch ID login out of the box
+- ✅ **Universal Code Sharing** - Write once, run on Web (Next.js 15) and Mobile (Expo 52)
+- ✅ **Passkey Authentication** - Face ID / Touch ID login out of the box (WebAuthn + Native Biometrics)
 - ✅ **Gasless Transactions** - Zero-fee transactions via Lazorkit Paymaster
-- ✅ **Smart Wallet** - Account abstraction powered by Lazorkit (100% onchain devnet)
-- ✅ **Production Ready** - TypeScript, proper error handling, and best practices
+- ✅ **Smart Wallet** - Account abstraction powered by Lazorkit (100% onchain)
+- ✅ **Production Ready** - TypeScript, proper error handling, comprehensive documentation
+- ✅ **Network Support** - Seamless switching between Mainnet and Devnet
 
-## 🎯 Features
+## 🎯 Features Comparison
 
-| Feature | Traditional Wallet | Lazorkit Wallet |
-|---------|-------------------|-----------------|
-| **Authentication** | Seed phrase (risky) | Passkey (Face ID / Touch ID) ✅ |
-| **Gas Fees** | User pays SOL | Gasless (Paymaster) ✅ |
+| Feature | Traditional Wallet | Lazorkit Wallet (This Starter) |
+|---------|-------------------|--------------------------------|
+| **Authentication** | Seed phrase (risky, complex) | Passkey (Face ID / Touch ID) ✅ |
+| **Gas Fees** | User pays SOL | Gasless (Paymaster sponsored) ✅ |
 | **Account Type** | Keypair (single device) | Smart Wallet (multi-device) ✅ |
-| **Onboarding** | Complex | One-click ✅ |
+| **Onboarding** | Complex (seed phrase backup) | One-click (biometric) ✅ |
+| **Cross-Platform** | Separate codebases | Shared code (monorepo) ✅ |
+| **Mobile Support** | Limited | Full native support ✅ |
 
 ## 🏗️ Architecture
 
 ```
 lazor-starter/
 ├── apps/
-│   ├── web/          # Next.js 15 (App Router)
-│   │   └── app/api/orders/create-smart-wallet/  # Onchain backend API
-│   └── mobile/       # Expo 52 (React Native)
+│   ├── web/                    # Next.js 15 (App Router)
+│   │   ├── app/
+│   │   │   ├── dashboard/       # Dashboard page
+│   │   │   ├── store/          # E-commerce demo
+│   │   │   └── api/            # Backend API routes
+│   │   └── components/          # Web-specific components
+│   └── mobile/                  # Expo 52 (React Native)
+│       ├── app/                 # Expo Router screens
+│       └── src/
+│           ├── hooks/           # Mobile-specific hooks
+│           └── polyfills.ts     # Solana Web3.js polyfills
 ├── packages/
-│   ├── lazor-core/   # Shared Lazorkit logic
-│   └── ui/           # Shared UI components
-├── .env.local        # Shared environment variables (root)
-└── docs/             # Tutorials and guides
+│   ├── lazor-core/              # 🎯 Shared Lazorkit logic
+│   │   ├── src/
+│   │   │   ├── hooks/           # useAuth, useGaslessTx, useWalletBalance
+│   │   │   ├── providers/       # WalletProvider
+│   │   │   ├── utils/           # Storage, formatting, validation
+│   │   │   └── types/           # TypeScript types
+│   │   └── package.json
+│   └── ui/                      # Shared UI components
+│       └── src/
+│           └── components/       # Reusable components
+├── docs/                         # Comprehensive tutorials
+│   ├── tutorial-1-setup-and-configuration.md
+│   ├── tutorial-2-passkey-authentication.md
+│   ├── tutorial-3-gasless-transactions.md
+│   └── tutorial-4-advanced-features.md
+├── .env.local                    # Environment variables (root)
+├── turbo.json                    # Turborepo configuration
+└── pnpm-workspace.yaml           # pnpm workspace configuration
 ```
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-- Node.js 18+
-- pnpm 8+
-- iOS Simulator / Android Emulator (for mobile)
+- **Node.js** 18+ installed
+- **pnpm** 8+ installed
+- **iOS Simulator** or **Android Emulator** (for mobile development)
+- **Expo Go** app (optional, for testing on physical device)
 
 ### Installation
 
@@ -58,113 +87,277 @@ lazor-starter/
 git clone <your-repo-url>
 cd lazor-starter
 
-# Copy environment file
-cp .env.example .env.local
-
-# Install dependencies
+# Install all dependencies
 pnpm install
 
-# Start development servers
+# Build core package
+cd packages/lazor-core
+pnpm build
+cd ../..
+```
+
+### Environment Configuration
+
+Create `.env.local` in the **root directory**:
+
+```env
+# ===== MAINNET (PUBLIC) =====
+NEXT_PUBLIC_LAZORKIT_RPC_URL=https://mainnet.helius-rpc.com/?api-key=47712b7a-ea63-49b8-9685-dff77d9eb55a
+NEXT_PUBLIC_LAZORKIT_PORTAL_URL=https://portal.lazor.sh
+NEXT_PUBLIC_LAZORKIT_PAYMASTER_URL=https://kora.lazorkit.com
+NEXT_PUBLIC_LAZORKIT_API_KEY=kora_live_api_cfa755da42cf3026291a5069e74ff37f3514d06400059c4408a20738e334df1d
+
+# ===== DEVNET (PUBLIC) =====
+NEXT_PUBLIC_LAZORKIT_RPC_URL_DEVNET=https://devnet.helius-rpc.com/?api-key=47712b7a-ea63-49b8-9685-dff77d9eb55a
+NEXT_PUBLIC_LAZORKIT_PORTAL_URL_DEVNET=https://portal.lazor.sh
+NEXT_PUBLIC_LAZORKIT_PAYMASTER_URL_DEVNET=https://kora.devnet.lazorkit.com
+
+# ===== Backend API (Optional) =====
+NEXT_PUBLIC_API_BASE_URL=http://localhost:3001
+```
+
+**Important**: Both Web and Mobile apps read from the same `.env.local` file.
+
+### Running the Apps
+
+#### Web (Next.js)
+
+```bash
+# From root directory
+pnpm dev
+
+# Or from apps/web
+cd apps/web
 pnpm dev
 ```
 
-This will start:
-- **Web**: http://localhost:3000
-- **Mobile**: Expo Dev Server (scan QR with Expo Go app)
+Web app will be available at: **http://localhost:3000**
 
-### Environment Variables
+#### Mobile (Expo)
 
-**IMPORTANT**: Create `.env.local` in the **root directory**. Both Web and Mobile apps will read from this file.
+```bash
+# From root directory
+cd apps/mobile
+pnpm dev
 
-```env
-# Lazorkit Configuration (Shared for Web & Mobile)
-NEXT_PUBLIC_LAZORKIT_RPC_URL=https://devnet.helius-rpc.com/?api-key=...
-NEXT_PUBLIC_LAZORKIT_PORTAL_URL=https://portal.lazor.sh
-NEXT_PUBLIC_LAZORKIT_PAYMASTER_URL=https://kora.devnet.lazorkit.com/
-
-# Backend API
-NEXT_PUBLIC_API_BASE_URL=http://localhost:3001
-
-# Backend Server (for smart wallet creation)
-PRIVATE_KEY=your_admin_private_key_base58
-RPC_URL=https://devnet.helius-rpc.com/?api-key=...
-SMART_WALLET_INIT_LAMPORTS=3500000
+# Or use Expo CLI
+npx expo start
 ```
 
-See `.env.example` for all available variables.
+Scan the QR code with **Expo Go** app, or press:
+- `i` for iOS Simulator
+- `a` for Android Emulator
 
 ## 📚 Documentation
 
-- [Setup Guide](./SETUP.md) - Detailed setup instructions
-- [Tutorial 1: Building Your First Passkey Wallet](./docs/tutorial-1-passkey-wallet.md)
-- [Tutorial 2: Gasless Transactions in 3 Lines](./docs/tutorial-2-gasless.md)
-- [Backend Setup Guide](./docs/backend-setup.md)
+Comprehensive tutorials for both Web and Mobile:
+
+- **[Tutorial 1: Setup and Configuration](./docs/tutorial-1-setup-and-configuration.md)** - Environment setup, provider configuration, polyfills
+- **[Tutorial 2: Passkey Authentication](./docs/tutorial-2-passkey-authentication.md)** - Implementing Face ID / Touch ID login
+- **[Tutorial 3: Gasless Transactions](./docs/tutorial-3-gasless-transactions.md)** - Sending tokens without gas fees
+- **[Tutorial 4: Advanced Features](./docs/tutorial-4-advanced-features.md)** - Wallet balance, airdrops, network switching
+
+Additional guides:
+- [Quick Start Guide](./QUICK_START.md) - Quick reference
+- [Backend Setup Guide](./docs/backend-setup.md) - Backend API configuration
 
 ## 🎓 What's Inside?
 
-### `packages/lazor-core`
+### `packages/lazor-core` - The Heart of the Project
 
-The heart of the project - shared logic for both Web and Mobile:
+Shared logic for both Web and Mobile platforms:
 
-- **LazorProvider** - Wraps Lazorkit SDK provider
-- **useLazorAuth** - Passkey login/logout/registration
-- **useGaslessTx** - Gasless transaction hooks (SOL & SPL tokens)
+#### Hooks
 
-### `apps/web`
+- **`useAuth`** - Passkey authentication (login, logout, registration)
+  ```tsx
+  const { isLoggedIn, pubkey, registerNewWallet, logout } = useAuth();
+  ```
 
-Next.js 15 application with:
-- App Router
-- Tailwind CSS
-- TypeScript
-- **Onchain API routes** - `/api/orders/create-smart-wallet` (100% devnet, no mocks)
+- **`useWallet`** - Lazorkit SDK wrapper
+  ```tsx
+  const wallet = useWallet();
+  ```
 
-### `apps/mobile`
+- **`useGaslessTx`** - Gasless transaction methods
+  ```tsx
+  const { transferSOL, transferSPLToken, sendTransaction } = useGaslessTx();
+  ```
 
-Expo 52 application with:
-- React Native
-- Expo Router
-- Polyfills for Solana Web3.js
-- Native biometric authentication
+- **`useWalletBalance`** - Fetch SOL and USDC balances
+  ```tsx
+  const { solBalance, usdcBalance, solBalanceText, usdcBalanceText } = useWalletBalance(pubkey, usdcMint);
+  ```
+
+- **`useAirdrop`** - Request test tokens on devnet
+  ```tsx
+  const { requestSOLAirdrop, requestUSDCAirdrop } = useAirdrop();
+  ```
+
+#### Providers
+
+- **`WalletProvider`** - Universal provider wrapper for Lazorkit SDK
+  - Automatically configures RPC URL, Paymaster URL, Portal URL
+  - Supports network switching (mainnet/devnet)
+  - Handles environment variable loading
+
+#### Utilities
+
+- **Storage**: `getStorage()`, `initMobileStorage()` - Cross-platform storage
+- **Formatting**: `formatAddress()`, `formatBalance()` - Display helpers
+- **Validation**: `validateAddress()`, `isValidPublicKey()` - Address validation
+- **Explorer**: `getExplorerUrl()` - Generate Solana explorer URLs
+
+### `apps/web` - Next.js 15 Application
+
+- **App Router** - Next.js 15 App Router with TypeScript
+- **Tailwind CSS** - Utility-first CSS framework
+- **API Routes** - Backend API for smart wallet creation
+- **WalletProviderWrapper** - Automatic provider configuration
+
+### `apps/mobile` - Expo 52 Application
+
+- **Expo Router** - File-based routing
+- **React Native** - Native mobile components
+- **Polyfills** - Complete Solana Web3.js polyfills for React Native
+- **Native Biometrics** - Face ID / Touch ID via `@lazorkit/wallet-mobile-adapter`
+- **AsyncStorage** - Persistent storage for mobile
 
 ## 🔧 Tech Stack
 
-- **Monorepo**: Turborepo + pnpm
-- **Web**: Next.js 15, React 18.3.1, Tailwind CSS
-- **Mobile**: Expo 52, React Native 0.76.3
-- **Blockchain**: Lazorkit SDK 1.7.5, Solana Web3.js
-- **State**: Zustand
-- **Language**: TypeScript 5.0
+### Core
 
-## ✅ Onchain Features (100% Devnet)
+- **Monorepo**: Turborepo 2.3.0 + pnpm 8+
+- **Language**: TypeScript 5.0
+- **State Management**: Zustand
+
+### Web
+
+- **Framework**: Next.js 15.0.3 (App Router)
+- **React**: 18.3.1
+- **Styling**: Tailwind CSS
+- **UI Components**: Shadcn/UI
+
+### Mobile
+
+- **Framework**: Expo 52
+- **React Native**: 0.76.3
+- **Router**: Expo Router
+- **Storage**: AsyncStorage
+
+### Blockchain
+
+- **SDK**: Lazorkit SDK 1.7.5+
+- **Blockchain**: Solana (Mainnet & Devnet)
+- **Web3**: @solana/web3.js
+- **SPL Tokens**: @solana/spl-token
+
+## ✅ Onchain Features
 
 All features are **fully onchain** - no mocks:
 
-- ✅ **Passkey Creation** - Real WebAuthn credentials
+- ✅ **Passkey Creation** - Real WebAuthn credentials (Web) + Native biometrics (Mobile)
 - ✅ **Smart Wallet Creation** - Onchain PDA creation via Lazorkit Program
 - ✅ **Token Transfers** - Real SOL and SPL token transfers
-- ✅ **Gasless Transactions** - Real Paymaster integration
+- ✅ **Gasless Transactions** - Real Paymaster integration (Mainnet & Devnet)
+- ✅ **Network Switching** - Seamless switching between Mainnet and Devnet
+- ✅ **Session Persistence** - Automatic session restoration across app reloads
 
 ## 🎯 Use Cases
 
 This starter is perfect for:
 
-- 🏪 **E-commerce** - "Pay with Solana" buttons
+- 🏪 **E-commerce** - "Pay with Solana" buttons with gasless transactions
 - 💰 **P2P Payments** - Send tokens without gas fees
-- 🎮 **Gaming** - In-game purchases with Passkey
+- 🎮 **Gaming** - In-game purchases with Passkey authentication
 - 📱 **Mobile Wallets** - Native mobile wallet apps
 - 🌐 **Web Apps** - Web3 dApps with better UX
+- 🏦 **DeFi** - Decentralized finance applications
+- 🎫 **NFT Marketplaces** - Gasless NFT transactions
+
+## 🔑 Key Features Explained
+
+### Universal Code Sharing
+
+The `packages/lazor-core` package contains all shared logic:
+- Authentication hooks work on both Web and Mobile
+- Transaction logic is platform-agnostic
+- Storage utilities abstract localStorage (Web) and AsyncStorage (Mobile)
+
+### Passkey Authentication
+
+- **Web**: Uses WebAuthn API (Face ID / Touch ID / Windows Hello)
+- **Mobile**: Uses native biometric authentication via `@lazorkit/wallet-mobile-adapter`
+- **Storage**: Automatic session persistence across app reloads
+
+### Gasless Transactions
+
+- **Zero Gas Fees**: All transactions sponsored by Lazorkit Paymaster
+- **Mainnet & Devnet**: Support for both networks
+- **SOL & SPL Tokens**: Transfer native SOL or any SPL token (USDC, USDT, etc.)
+
+### Network Switching
+
+Users can switch between Mainnet and Devnet:
+- Separate wallets for each network
+- Automatic RPC URL and Paymaster URL switching
+- Network state persists in Zustand store
+
+## 🐛 Troubleshooting
+
+### "Missing environment variables"
+
+- Ensure `.env.local` is in the **root directory**
+- Check that all `NEXT_PUBLIC_*` variables are set
+- Restart development server after changing `.env.local`
+
+### "Buffer is not defined" (Web)
+
+- Ensure `WalletProviderWrapper` is wrapping your app
+- Check that `buffer` package is installed
+
+### "Polyfills not loaded" (Mobile)
+
+- Ensure `polyfills.ts` is imported **first** in `index.js`
+- Check that all polyfill packages are installed
+
+### "AsyncStorage not working" (Mobile)
+
+- Ensure `@react-native-async-storage/async-storage` is installed
+- Check that `initMobileStorage()` is called in `_layout.tsx`
+
+### Build Errors
+
+```bash
+# Rebuild core package
+cd packages/lazor-core
+pnpm build
+cd ../..
+```
 
 ## 🤝 Contributing
 
-This is a starter template for the Lazorkit SDK Integration Bounty. Contributions welcome!
+This is a starter template for the **Lazorkit SDK Integration Bounty**. Contributions welcome!
 
 ## 📄 License
 
-MIT
+This project is licensed under a **custom license** designed to protect the work while allowing educational use. 
+
+**Key Points:**
+- ✅ **Permitted**: Study, learn, use as reference, fork for education, contribute improvements
+- ❌ **Restricted**: Using this codebase as a submission for the same competitive event
+- 📝 **Required**: Proper attribution when using or distributing
+
+**Full License Terms**: See [LICENSE](./LICENSE) file for complete terms and conditions.
+
+**Important**: This codebase is submitted for the "Lazorkit SDK Integration Bounty 2025". Please respect the competition restrictions outlined in the LICENSE file.
 
 ## 🙏 Acknowledgments
 
-Built with ❤️ for the Lazorkit community. Special thanks to the RampFi project for inspiration.
+Built with ❤️ for the Lazorkit community. Special thanks to:
+- Lazorkit team for the amazing SDK
+- Solana Foundation for the blockchain infrastructure
+- RampFi project for inspiration
 
 ---
 

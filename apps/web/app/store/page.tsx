@@ -1,6 +1,6 @@
 'use client';
 
-import { useLazorAuth } from '@lazor-starter/core';
+import { useAuth } from '@lazor-starter/core';
 import { ExpandableCard, Alert, AlertDescription } from '@lazor-starter/ui';
 import type { ExpandableCardItem } from '@lazor-starter/ui';
 import { useState } from 'react';
@@ -12,7 +12,7 @@ const USDC_DEVNET_MINT = '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU';
 
 export default function StorePage() {
   const router = useRouter();
-  const { isLoggedIn, isInitialized } = useLazorAuth();
+  const { isLoggedIn, isInitialized } = useAuth();
   const { transferSPLToken } = useGaslessTx();
   const [paymentSuccess, setPaymentSuccess] = useState<string | null>(null);
   const [paymentError, setPaymentError] = useState<string | null>(null);

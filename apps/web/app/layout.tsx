@@ -1,10 +1,15 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { LazorProviderWrapper } from '../components/LazorProviderWrapper';
+import { WalletProviderWrapper } from '../components/WalletProviderWrapper';
 
 export const metadata: Metadata = {
   title: 'Lazor Starter - Universal Lazorkit SDK Starter',
   description: 'Production-ready Universal Monorepo Starter for Lazorkit SDK',
+  icons: {
+    icon: '/images/lazorkit-logo.png',
+    shortcut: '/images/lazorkit-logo.png',
+    apple: '/images/lazorkit-logo.png',
+  },
 };
 
 export default function RootLayout({
@@ -61,9 +66,9 @@ export default function RootLayout({
             `,
           }}
         />
-        <LazorProviderWrapper>
+        <WalletProviderWrapper>
           {children}
-        </LazorProviderWrapper>
+        </WalletProviderWrapper>
       </body>
     </html>
   );

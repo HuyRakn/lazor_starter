@@ -27,7 +27,7 @@ type Props = {
  * @param network - Optional network override (mainnet/devnet), defaults to store value
  * @returns Provider component wrapping children
  */
-export function LazorProvider({ children, rpcUrl, paymasterUrl, ipfsUrl, apiKey, network: networkProp }: Props) {
+export function WalletProvider({ children, rpcUrl, paymasterUrl, ipfsUrl, apiKey, network: networkProp }: Props) {
   const networkStore = useNetworkStore();
   const network = networkProp || networkStore.network;
   const isDevnet = network === 'devnet';
@@ -87,7 +87,7 @@ export function LazorProvider({ children, rpcUrl, paymasterUrl, ipfsUrl, apiKey,
 
   if (!finalRpcUrl || !finalPaymasterUrl || !finalIpfsUrl) {
     console.warn(
-      'LazorProvider: Missing required environment variables. Some features may not work.',
+      'WalletProvider: Missing required environment variables. Some features may not work.',
       {
         rpcUrl: finalRpcUrl,
         paymasterUrl: finalPaymasterUrl,
@@ -98,10 +98,11 @@ export function LazorProvider({ children, rpcUrl, paymasterUrl, ipfsUrl, apiKey,
   }
 
   if (!isDevnet && !finalApiKey) {
-    console.warn('LazorProvider: Paymaster API key is missing. Gasless may fail.');
+    console.warn('WalletProvider: Paymaster API key is missing. Gasless may fail.');
   }
 
   return <>{children}</>;
 }
 
-export default LazorProvider;
+export default WalletProvider;
+

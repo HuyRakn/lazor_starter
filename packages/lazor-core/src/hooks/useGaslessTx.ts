@@ -1,8 +1,8 @@
 'use client';
 
 import { useCallback } from 'react';
-import { useLazorWallet } from './useLazorWallet';
-import { useLazorAuth } from './useLazorAuth';
+import { useWallet } from './useWallet';
+import { useAuth } from './useAuth';
 import { TransactionInstruction, SystemProgram, PublicKey } from '@solana/web3.js';
 import { useNetworkStore } from '../state/networkStore';
 import {
@@ -22,8 +22,8 @@ import type { GaslessTxOptions } from '../types';
  * @returns {(recipient: string, amount: number, tokenMint: string, decimals?: number, options?: GaslessTxOptions) => Promise<string>} returns.transferSPLToken - Transfer SPL tokens (USDC, etc.)
  */
 export function useGaslessTx() {
-  const wallet = useLazorWallet();
-  const { pubkey, isLoggedIn } = useLazorAuth();
+  const wallet = useWallet();
+  const { pubkey, isLoggedIn } = useAuth();
   const network = useNetworkStore((state) => state.network);
 
   /**

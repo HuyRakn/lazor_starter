@@ -1,16 +1,78 @@
-MIT License
+Lazor Starter License
 
 Copyright (c) 2025 Lazor Starter
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+All rights reserved.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
+
+1. DEFINITIONS
+
+"License" shall mean the terms and conditions for use, reproduction, and distribution
+as defined by this document.
+
+"Licensor" shall mean the copyright owner or entity authorized by the copyright owner
+that is granting the License.
+
+"You" (or "Your") shall mean an individual or Legal Entity exercising permissions
+granted by this License.
+
+"Source" form shall mean the preferred form for making modifications, including but
+not limited to software source code, documentation source, and configuration files.
+
+"Object" form shall mean any form resulting from mechanical transformation or
+translation of a Source form, including but not limited to compiled object code,
+generated documentation, and conversions to other media types.
+
+"Derivative Works" shall mean any work, whether in Source or Object form, that is
+based on (or derived from) the Work and for which the editorial revisions,
+annotations, elaborations, or other modifications represent, as a whole, an original
+work of authorship.
+
+2. GRANT OF COPYRIGHT LICENSE
+
+Subject to the terms and conditions of this License, each Contributor hereby grants
+to You a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable
+copyright license to reproduce, prepare Derivative Works of, publicly display,
+publicly perform, sublicense, and distribute the Work and such Derivative Works
+in Source or Object form, WITH THE FOLLOWING RESTRICTIONS:
+
+3. RESTRICTIONS
+
+a) COMPETITION RESTRICTION:
+   You may NOT use this Work, in whole or in substantial part, as a submission
+   for the "Lazorkit SDK Integration Bounty 2025" or any similar competitive event
+   that directly competes with the original submission. This includes but is not
+   limited to:
+   - Submitting this codebase as your own entry
+   - Using substantial portions of this codebase in a competing submission
+   - Creating derivative works primarily for competitive purposes in the same event
+
+b) ATTRIBUTION REQUIREMENT:
+   If you use, modify, or distribute this Work, you MUST:
+   - Include the original copyright notice
+   - Include a link to the original repository
+   - Clearly indicate that your work is based on or derived from this Work
+   - Provide attribution in a prominent location (README, documentation, or UI)
+
+c) COMMERCIAL USE:
+   Commercial use is permitted, provided that:
+   - Attribution requirements are met
+   - The Work is not used in a manner that directly competes with the original
+     submission in the same competitive event
+   - You have obtained appropriate licenses for all third-party components
+
+4. PERMITTED USES
+
+You ARE permitted to:
+- Study and learn from the code
+- Use the code as a reference for your own projects
+- Fork the repository for educational purposes
+- Create derivative works for non-competitive purposes
+- Contribute improvements back to the original repository
+- Use the code in your own projects (with proper attribution)
+
+5. DISCLAIMER OF WARRANTY
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -20,3 +82,43 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
+6. LIMITATION OF LIABILITY
+
+IN NO EVENT AND UNDER NO LEGAL THEORY, WHETHER IN TORT (INCLUDING NEGLIGENCE),
+CONTRACT, OR OTHERWISE, UNLESS REQUIRED BY APPLICABLE LAW (SUCH AS DELIBERATE
+AND GROSSLY NEGLIGENT ACTS) OR AGREED TO IN WRITING, SHALL ANY CONTRIBUTOR BE
+LIABLE TO YOU FOR DAMAGES, INCLUDING ANY DIRECT, INDIRECT, SPECIAL, INCIDENTAL,
+OR CONSEQUENTIAL DAMAGES OF ANY CHARACTER ARISING AS A RESULT OF THIS LICENSE
+OR OUT OF THE USE OR INABILITY TO USE THE WORK (INCLUDING BUT NOT LIMITED TO
+DAMAGES FOR LOSS OF GOODWILL, WORK STOPPAGE, COMPUTER FAILURE OR MALFUNCTION,
+OR ANY AND ALL OTHER COMMERCIAL DAMAGES OR LOSSES), EVEN IF SUCH CONTRIBUTOR
+HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+
+7. THIRD-PARTY COMPONENTS
+
+This Work includes third-party components that are subject to their own licenses.
+You are responsible for ensuring compliance with all applicable licenses for
+third-party components, including but not limited to:
+- @lazorkit/wallet and related Lazorkit SDK components
+- Radix UI components
+- React Native primitives
+- Solana Web3.js and related libraries
+
+8. ENFORCEMENT
+
+Violation of the terms of this License may result in:
+- Legal action to protect intellectual property rights
+- Reporting to competition organizers
+- Public disclosure of the violation
+
+9. CONTACT
+
+For questions about this License or to request special permissions, please contact
+the repository maintainers through the official repository.
+
+---
+
+This License is effective as of the date of first publication and applies to all
+versions of the Work, including future versions unless explicitly stated otherwise.
+
+END OF TERMS AND CONDITIONS

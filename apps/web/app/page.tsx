@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useLazorAuth } from '@lazor-starter/core';
+import { useAuth } from '@lazor-starter/core';
 
 /**
  * Home page - redirects to dashboard
@@ -11,7 +11,7 @@ import { useLazorAuth } from '@lazor-starter/core';
  */
 export default function HomePage() {
   const router = useRouter();
-  const { isInitialized } = useLazorAuth();
+  const { isInitialized } = useAuth();
 
   useEffect(() => {
     if (isInitialized) {
