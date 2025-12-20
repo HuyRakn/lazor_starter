@@ -10,6 +10,20 @@ Passkey authentication provides a secure, passwordless login experience:
 
 Both platforms share the same authentication logic from `@lazor-starter/core`.
 
+## ⚠️ Critical: HTTPS Requirement for Web
+
+**WebAuthn/Passkey on Web REQUIRES HTTPS, even for localhost.**
+
+- ✅ **Use**: `https://localhost:3000`
+- ❌ **Don't use**: `http://localhost:3000`
+
+**Why?**
+- WebAuthn specification requires secure context (HTTPS)
+- Browsers block WebAuthn on HTTP for security
+- Passkey will **fail silently** or show errors on HTTP
+
+**Note:** Mobile apps don't have this restriction - they use native APIs.
+
 ## Step 1: Web Implementation
 
 ### 1.1 Use the Auth Hook
@@ -317,11 +331,15 @@ const handleLogin = async () => {
 
 ### Web Testing
 
-1. Open http://localhost:3000
+1. Open **https://localhost:3000** (⚠️ **HTTPS required**, not HTTP)
+   - Accept SSL certificate warning if prompted (safe for local development)
+   - **Passkey will NOT work on HTTP** - WebAuthn requires HTTPS
 2. Click "Login with Passkey"
 3. Use Face ID / Touch ID when prompted
 4. Verify wallet address is displayed
 5. Refresh page - should stay logged in
+
+**⚠️ Critical:** Always use `https://localhost:3000` for Passkey authentication. HTTP will fail silently or show errors.
 
 ### Mobile Testing
 
