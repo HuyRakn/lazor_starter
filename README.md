@@ -135,7 +135,18 @@ cd apps/web
 pnpm dev
 ```
 
-Web app will be available at: **http://localhost:3000**
+**⚠️ IMPORTANT: HTTPS Required**
+
+Web app will be available at: **https://localhost:3000** (note: **HTTPS**, not HTTP)
+
+**Why HTTPS is Required:**
+- **WebAuthn/Passkey** requires HTTPS for security (browser security policy)
+- Passkey authentication will **NOT work** on HTTP, even on localhost
+- The dev server automatically uses HTTPS via `--experimental-https` flag
+
+**First Time Setup:**
+- Accept the SSL certificate warning in your browser (safe for local development)
+- Access the app via `https://localhost:3000`, not `http://localhost:3000`
 
 #### Mobile (Expo)
 

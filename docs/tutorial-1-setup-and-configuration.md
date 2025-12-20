@@ -9,6 +9,22 @@ This tutorial will guide you through setting up the Lazor Starter project for bo
 - **iOS Simulator** or **Android Emulator** (for mobile development)
 - **Expo Go** app on your phone (for testing mobile app)
 
+## ⚠️ Important: HTTPS Requirement
+
+**This project REQUIRES HTTPS, even for local development.**
+
+**Why?**
+- **WebAuthn/Passkey** authentication requires HTTPS (browser security policy)
+- Passkey will **NOT work** on HTTP, even on `localhost`
+- This is a security requirement from the WebAuthn specification
+
+**What this means:**
+- Always access the web app via `https://localhost:3000` (not `http://`)
+- The dev server automatically uses HTTPS via `--experimental-https` flag
+- You'll need to accept a self-signed SSL certificate warning (safe for local development)
+
+**Mobile apps** don't have this restriction - they use native biometric APIs.
+
 ## Step 1: Clone and Install
 
 ```bash
@@ -100,7 +116,22 @@ cd apps/web
 pnpm dev
 ```
 
-Web app will be available at: **http://localhost:3000**
+**⚠️ IMPORTANT: HTTPS Required**
+
+Web app will be available at: **https://localhost:3000** (note: **HTTPS**, not HTTP)
+
+**Why HTTPS is Required:**
+- **WebAuthn/Passkey** requires HTTPS for security (browser security policy)
+- Passkey authentication will **NOT work** on HTTP, even on localhost
+- The dev server is configured with `--experimental-https` flag
+
+**First Time Setup:**
+If you see SSL certificate warnings:
+1. Click "Advanced" in your browser
+2. Click "Proceed to localhost (unsafe)" or "Accept the Risk"
+3. This is safe for local development - the certificate is self-signed
+
+**Note:** The dev script automatically uses HTTPS. Make sure you access the app via `https://localhost:3000`, not `http://localhost:3000`.
 
 ## Step 5: Mobile Setup (Expo)
 
@@ -190,9 +221,12 @@ Scan the QR code with **Expo Go** app on your phone, or press `i` for iOS Simula
 
 ### Web Verification
 
-1. Open http://localhost:3000
-2. Check browser console for any errors
-3. You should see the login screen
+1. Open **https://localhost:3000** (⚠️ **HTTPS required**, not HTTP)
+2. Accept the SSL certificate warning if prompted (safe for local development)
+3. Check browser console for any errors
+4. You should see the login screen
+
+**⚠️ Important:** If you use `http://localhost:3000`, Passkey authentication will **NOT work** due to WebAuthn security requirements.
 
 ### Mobile Verification
 
@@ -202,6 +236,20 @@ Scan the QR code with **Expo Go** app on your phone, or press `i` for iOS Simula
 4. You should see the login screen
 
 ## Troubleshooting
+
+### "Passkey not working" or "WebAuthn error"
+
+**Most common cause: Using HTTP instead of HTTPS**
+
+- ✅ **Solution**: Always use `https://localhost:3000` (not `http://`)
+- Check browser address bar - should show `https://` with a lock icon (may show "Not secure" for self-signed cert, which is OK)
+- Clear browser cache and try again
+- If still not working, check browser console for WebAuthn errors
+
+**Why this happens:**
+- WebAuthn/Passkey requires HTTPS for security
+- Browsers block WebAuthn on HTTP, even on localhost
+- This is a browser security policy, not a bug
 
 ### "Missing environment variables"
 
