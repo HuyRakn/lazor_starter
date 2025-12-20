@@ -1,16 +1,23 @@
 # Dependencies
-node_modules
+node_modules/
 .pnp
 .pnp.js
 
 # Testing
-coverage
+coverage/
+.nyc_output/
+.coverage/
 
 # Next.js
 .next/
 out/
 build/
+
+# Build outputs
 dist/
+*.map
+*.min.js
+*.min.css
 
 # Production
 *.log
@@ -25,52 +32,35 @@ yarn-error.log*
 pnpm-debug.log*
 
 # Local env files
-.env*.local
 .env
+.env*.local
 
 # Vercel
-.vercel
+.vercel/
 
 # Turbo
-.turbo
+.turbo/
+**/.turbo/
 
 # Expo
 .expo/
 .expo-shared/
+web-build/
 *.jks
 *.p8
 *.p12
 *.mobileprovision
 *.orig.*
-web-build/
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-*.code-workspace
-
-# OS
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-Thumbs.db
-ehthumbs.db
-Desktop.ini
-
-# TypeScript
-*.tsbuildinfo
-tsconfig.tsbuildinfo
 
 # SSL/TLS Certificates
 .cert/
 *.pem
 *.key
 *.crt
+
+# TypeScript
+*.tsbuildinfo
+tsconfig.tsbuildinfo
 
 # Package manager locks (keep pnpm-lock.yaml for reproducible builds)
 # pnpm-lock.yaml
@@ -79,17 +69,71 @@ tsconfig.tsbuildinfo
 *.tmp
 *.temp
 .cache/
-
-# Coverage and testing
-.nyc_output/
-.coverage/
+*.bak
 
 # Solana/Blockchain specific
 *.keypair
 *.json.key
 wallet.json
 
-# Build artifacts
-*.map
-*.min.js
-*.min.css
+# IDE - VSCode
+.vscode/*
+!.vscode/extensions.json
+*.code-workspace
+
+# IDE - JetBrains
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# IDE - Other
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*.swo
+
+# OS - macOS
+.DS_Store
+.DS_Store?
+._*
+.AppleDouble
+.LSOverride
+.Spotlight-V100
+.Trashes
+
+# OS - Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# OS - Linux
+*~
+.directory
+.Trash-*
+
+# App-specific (explicit for clarity)
+apps/*/node_modules/
+apps/*/.next/
+apps/*/.expo/
+apps/*/.turbo/
+apps/*/.env*.local
+apps/*/dist/
+apps/*/.cert/
+
+# Package-specific (explicit for clarity)
+packages/*/node_modules/
+packages/*/dist/
+packages/*/.turbo/
+
+# Patches (keep patches/ folder - uncomment if you don't want to commit)
+# patches/

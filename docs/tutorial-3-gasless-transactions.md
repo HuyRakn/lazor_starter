@@ -317,12 +317,14 @@ The Paymaster URL is automatically configured from environment variables:
 **Mainnet:**
 ```env
 NEXT_PUBLIC_LAZORKIT_PAYMASTER_URL=https://kora.lazorkit.com
-NEXT_PUBLIC_LAZORKIT_API_KEY=kora_live_api_...
+# Get your API key from Lazorkit dashboard
+NEXT_PUBLIC_LAZORKIT_API_KEY=YOUR_LAZORKIT_API_KEY_HERE
 ```
 
 **Devnet:**
 ```env
 NEXT_PUBLIC_LAZORKIT_PAYMASTER_URL_DEVNET=https://kora.devnet.lazorkit.com
+# Devnet doesn't require API key
 ```
 
 ### 5.2 Provider Configuration
