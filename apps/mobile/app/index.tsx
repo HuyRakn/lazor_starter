@@ -1,142 +1,142 @@
 import { View, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useLazorAuth, saveUserPrivateKey, getUserPrivateKey } from '@lazor-starter/core';
-import { Button, Card, CardContent, CardHeader, CardTitle, Text, Alert, AlertDescription, Input, Label } from '@lazor-starter/ui';
 import { AlertCircle } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import {
+  useNetworkStore,
+  formatAddress,
+} from '@lazor-starter/core';
+import { useMobileAuth } from '../src/hooks/useMobileAuth';
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Text,
+} from '@lazor-starter/ui';
 import React, { useState, useEffect } from 'react';
 
+/**
+ * Home screen component for mobile app
+ * 
+ * Displays login form with network selector (mainnet/devnet).
+ * After successful login, redirects to dashboard.
+ * 
+ * @returns Home screen component
+ */
 export default function HomeScreen() {
   const router = useRouter();
-  const { isLoggedIn, pubkey, registerNewWallet, logout, isInitialized } = useLazorAuth();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [privateKey, setPrivateKey] = useState<string>('');
-  const [showPrivateKeyInput, setShowPrivateKeyInput] = useState(false);
-
-  // Load saved private key on mount
-  useEffect(() => {
-    const savedKey = getUserPrivateKey();
-    if (savedKey) {
-      setPrivateKey(savedKey);
-    }
-  }, []);
-
-  // Debug logs
-  React.useEffect(() => {
-    console.log('HomeScreen render:', { isInitialized, isLoggedIn, pubkey });
-  }, [isInitialized, isLoggedIn, pubkey]);
-
-  // Wait for storage initialization before rendering
-  if (!isInitialized) {
-    return (
-      <View style={styles.container}>
-        <Text style={{ color: '#9CA3AF', fontSize: 16 }}>Loading...</Text>
-      </View>
-    );
-  }
+  const {
+    isLoggedIn,
+    pubkey,
+    registerNewWallet,
+    logout,
+    isInitialized,
+  } = useMobileAuth();
+  const { network, setNetwork } = useNetworkStore();
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   /**
-   * Saves user's private key to storage
+   * Formats error messages to be more user-friendly
    *
-   * @returns Promise that resolves when save is complete
+   * Parses JSON error responses and extracts meaningful messages.
+   * Handles rate limit errors, network errors, and generic errors.
+   *
+   * @param error - The error object or string to format
+   * @returns Formatted error message string
    */
-  const handleSavePrivateKey = async () => {
-    if (!privateKey.trim()) {
-      setError('Please enter your private key');
-      return;
-    }
+  const formatErrorMessage = (error: any): string => {
+    if (!error) return 'An unknown error occurred';
+
+    const errorMessage =
+      error?.message || error?.toString() || 'An unknown error occurred';
 
     try {
-      await saveUserPrivateKey(privateKey.trim());
-      setShowPrivateKeyInput(false);
-      setError(null);
-    } catch (e: any) {
-      setError(e?.message || 'Failed to save private key');
+      const jsonMatch = errorMessage.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (parsed?.error?.message) {
+          return parsed.error.message;
+        }
+      }
+
+      if (errorMessage.toLowerCase().includes('rate limit')) {
+        return 'Rate limit exceeded. The devnet faucet has a limit of 1 SOL per project per day. Please try again later.';
+      }
+
+      if (errorMessage.includes('403')) {
+        return 'Request denied. You may have exceeded the rate limit. Please try again later.';
+      }
+
+      if (
+        errorMessage.includes('timeout') ||
+        errorMessage.includes('timed out')
+      ) {
+        return 'Request timed out. Please check your connection and try again.';
     }
+
+      if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+        return 'Network error. Please check your internet connection and try again.';
+      }
+    } catch {
+      // If parsing fails, return the original message
+    }
+
+    return errorMessage;
   };
 
   /**
    * Handles login/registration flow
    *
+   * Uses the currently selected network from useNetworkStore.
+   * Default network is mainnet, but user can switch to devnet before logging in.
+   *
    * @returns Promise that resolves when login completes
    */
   const handleLogin = async () => {
-    if (loading) return;
-    setLoading(true);
-    setError(null);
+    if (loginLoading) return;
+    setLoginLoading(true);
+    setLoginError(null);
 
     try {
-      if (!isLoggedIn) {
-        // Check if private key is provided
-        const savedKey = getUserPrivateKey();
-        if (!savedKey && !privateKey.trim()) {
-          setError('Please provide your private key to create a wallet. This is required for testing on devnet.');
-          setShowPrivateKeyInput(true);
-          setLoading(false);
-          return;
-        }
-
-        // Save private key if provided
-        if (privateKey.trim() && !savedKey) {
-          await saveUserPrivateKey(privateKey.trim());
-        }
-
-        // Register new wallet (create passkey + smart wallet onchain)
         const { walletAddress } = await registerNewWallet();
-        console.log('Wallet created onchain:', walletAddress);
+      console.log('Wallet created:', walletAddress);
         router.push('/dashboard');
-      } else {
-        router.push('/dashboard');
-      }
     } catch (e: any) {
-      console.error('Login failed:', e);
       const errorMessage = e?.message || 'Login failed';
-      
-      // Check if error indicates missing private key
-      if (errorMessage.includes('PRIVATE_KEY') || errorMessage.includes('private key') || e?.requiresPrivateKey) {
-        setError('Please provide your private key to create a wallet. This is required for testing on devnet.');
-        setShowPrivateKeyInput(true);
-      } else {
-        setError(errorMessage);
-      }
+      setLoginError(errorMessage);
     } finally {
-      setLoading(false);
+      setLoginLoading(false);
     }
   };
 
+  /**
+   * Handles logout action
+   *
+   * Logs out user and clears session.
+   * Resets network to mainnet for next login.
+   *
+   * @returns void
+   */
   const handleLogout = () => {
     logout();
+    setLoginError(null);
+    setNetwork('mainnet');
     router.replace('/');
   };
 
-  if (isLoggedIn) {
+  // Redirect to dashboard when already logged in (avoid rendering redirects)
+  useEffect(() => {
+    if (isInitialized && isLoggedIn && pubkey) {
+      router.replace('/dashboard');
+    }
+  }, [isInitialized, isLoggedIn, pubkey, router]);
+
+  if (!isInitialized) {
     return (
       <View style={styles.container}>
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={{ fontSize: 36, fontWeight: 'bold', color: '#FFFFFF', textAlign: 'center', marginBottom: 16 }}>
-              Welcome Back!
-            </Text>
-            <Text style={{ color: '#9CA3AF', fontFamily: 'monospace', fontSize: 12, textAlign: 'center', marginBottom: 24 }}>
-              Wallet: {pubkey?.slice(0, 8)}...{pubkey?.slice(-8)}
-            </Text>
-          </View>
-          <View style={{ flexDirection: 'row', gap: 16 }}>
-            <Button
-              onPress={() => router.push('/dashboard')}
-              className="flex-1 bg-green-600"
-            >
-              <Text>Go to Dashboard</Text>
-            </Button>
-            <Button
-              onPress={handleLogout}
-              variant="outline"
-              className="flex-1 bg-gray-600 border-gray-500"
-            >
-              <Text>Logout</Text>
-            </Button>
-          </View>
-        </View>
+        <Text style={{ color: '#9CA3AF', fontSize: 16 }}>Loading...</Text>
       </View>
     );
   }
@@ -147,53 +147,126 @@ export default function HomeScreen() {
         <View style={styles.cardHeader}>
           <Text style={styles.title}>
             <Text style={{ color: '#FFFFFF' }}>Lazor</Text>
-            <Text style={{ color: '#10B981' }}>Starter</Text>
+            <Text style={{ color: '#7857ff' }}>Starter</Text>
           </Text>
-          <Text style={styles.subtitle}>Universal Lazorkit SDK Starter</Text>
+          <Text style={styles.subtitle}>
+            Universal Lazorkit SDK Starter
+          </Text>
         </View>
         <View style={styles.cardContent}>
-          {(showPrivateKeyInput || error?.includes('private key')) && (
-            <View style={{ gap: 8, marginBottom: 16 }}>
-              <Label className="text-gray-400 text-sm">Private Key (for testing)</Label>
-              <Input
-                value={privateKey}
-                onChangeText={setPrivateKey}
-                placeholder="Enter your Solana private key (base58)"
-                secureTextEntry
-                autoCapitalize="none"
-                autoCorrect={false}
-                className="bg-gray-800 border-gray-700 text-white font-mono text-xs"
-              />
-              <Text style={{ color: '#6B7280', fontSize: 10 }}>
-                Your private key is stored locally and only used to pay for wallet creation fees on devnet.
-              </Text>
+          {/* Network selector */}
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: 8,
+            }}
+          >
+            <Text style={{ fontSize: 12, fontWeight: '500', color: '#9CA3AF' }}>
+              Network
+            </Text>
+            <View
+              style={{
+                flexDirection: 'row',
+                backgroundColor: '#111827',
+                borderRadius: 9999,
+                padding: 4,
+                borderWidth: 1,
+                borderColor: '#374151',
+              }}
+            >
               <Button
-                onPress={handleSavePrivateKey}
-                disabled={!privateKey.trim()}
-                className="w-full bg-blue-600"
-                size="sm"
+                {...({ onPress: () => setNetwork('mainnet') } as any)}
+                style={{
+                  backgroundColor: network === 'mainnet' ? '#FFFFFF' : 'transparent',
+                  borderRadius: 9999,
+                  paddingHorizontal: 4,
+                }}
               >
-                <Text>Save Private Key</Text>
+                <Text
+                  style={{
+                    fontSize: 12,
+                    color: network === 'mainnet' ? '#000000' : '#9CA3AF',
+                    fontWeight: network === 'mainnet' ? '600' : '400',
+                    paddingTop: 6,
+                    paddingBottom: 6,
+                    paddingLeft: 12,
+                    paddingRight: 12,
+                  }}
+                >
+                  MAIN
+              </Text>
+              </Button>
+              <Button
+                {...({ onPress: () => setNetwork('devnet') } as any)}
+                style={{
+                  backgroundColor: network === 'devnet' ? '#7857ff' : 'transparent',
+                  borderRadius: 9999,
+                  paddingHorizontal: 4,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 12,
+                    color: network === 'devnet' ? '#FFFFFF' : '#9CA3AF',
+                    fontWeight: network === 'devnet' ? '600' : '400',
+                    paddingTop: 6,
+                    paddingBottom: 6,
+                    paddingLeft: 12,
+                    paddingRight: 12,
+                  }}
+                >
+                  DEV
+                </Text>
               </Button>
             </View>
-          )}
+          </View>
 
           <Button
-            onPress={handleLogin}
-            disabled={loading}
-            className="w-full bg-green-600"
-            size="lg"
+            {...({ onPress: handleLogin } as any)}
+            disabled={loginLoading}
+            style={{
+              backgroundColor: '#7857ff',
+              borderRadius: 20,
+              paddingVertical: 14,
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: loginLoading ? 0.7 : 1,
+            }}
           >
-            <Text>{loading ? 'Connecting...' : 'Login with Passkey'}</Text>
+            <Text
+              style={{
+                color: '#FFFFFF',
+                fontSize: 16,
+                fontWeight: '600',
+              }}
+            >
+              {loginLoading ? 'Connecting...' : 'Login with Passkey'}
+            </Text>
           </Button>
 
-          {error && (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{error}</Text>
+          {loginError && (
+            <View
+              style={{
+                backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                borderWidth: 1,
+                borderColor: '#EF4444',
+                borderRadius: 12,
+                padding: 12,
+                marginTop: 12,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                <AlertCircle size={16} color="#FCA5A5" />
+                <Text style={{ color: '#FCA5A5', fontSize: 14, flex: 1 }}>
+                  {formatErrorMessage(loginError)}
+                </Text>
+              </View>
             </View>
           )}
 
-          {!showPrivateKeyInput && !error && (
+          {!loginError && (
             <Text style={styles.hintText}>
               Click to create your wallet with Face ID / Touch ID
             </Text>
@@ -203,6 +276,7 @@ export default function HomeScreen() {
     </View>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -236,21 +310,9 @@ const styles = StyleSheet.create({
   cardContent: {
     gap: 16,
   },
-  errorContainer: {
-    backgroundColor: '#7F1D1D',
-    borderWidth: 1,
-    borderColor: '#EF4444',
-    borderRadius: 8,
-    padding: 12,
-  },
-  errorText: {
-    color: '#FCA5A5',
-    fontSize: 12,
-  },
   hintText: {
     color: '#6B7280',
     fontSize: 12,
     textAlign: 'center',
   },
 });
-

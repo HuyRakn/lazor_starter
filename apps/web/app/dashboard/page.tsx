@@ -83,8 +83,6 @@ export default function DashboardPage() {
 
   // Local images for 3D Marquee from public/images
   const marqueeImageList = [
-    '/images/kay.jpg',
-    '/images/chaukhac.jpg',
     '/images/superteamvn.jpg',
     '/images/lazorkit-logo.png',
     '/images/poster-1.jpg',
@@ -209,7 +207,7 @@ export default function DashboardPage() {
       if (isNaN(amount) || amount <= 0) {
         setAirdropError('Please enter a valid amount');
         return;
-      }
+    }
     }
 
     setAirdropError(null);
@@ -356,7 +354,9 @@ export default function DashboardPage() {
                         <span className="text-base font-semibold text-white">{item.label}</span>
                         <span className="text-xs text-slate-400">{item.balance}</span>
                       </div>
-                      <span className="text-sm text-slate-200">{active ? 'Selected' : 'Choose'}</span>
+                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/40">
+                      {active && <span className="block h-2.5 w-2.5 rounded-full bg-white" />}
+                    </span>
                     </button>
                   );
                 })}
@@ -562,7 +562,9 @@ export default function DashboardPage() {
                         <span className="text-base font-semibold text-white">{item.label}</span>
                         <span className="text-xs text-slate-400">{item.balance}</span>
                       </div>
-                      <span className="text-sm text-slate-200">{active ? 'Selected' : 'Choose'}</span>
+                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/40">
+                      {active && <span className="block h-2.5 w-2.5 rounded-full bg-white" />}
+                    </span>
                     </button>
                   );
                 })}
@@ -633,7 +635,7 @@ export default function DashboardPage() {
 
               {airdropError && (
                 <Alert variant="destructive" className="mt-2">
-                  <AlertDescription className="text-red-200 text-sm">
+                <AlertDescription className="text-red-200 text-sm">
                     <div className="space-y-3">
                       <div className="flex items-start gap-2">
                         <svg
@@ -663,7 +665,7 @@ export default function DashboardPage() {
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
-                          >
+                        >
                             <path
                               strokeLinecap="round"
                               strokeLinejoin="round"
@@ -677,9 +679,9 @@ export default function DashboardPage() {
                         </a>
                       )}
                     </div>
-                  </AlertDescription>
-                </Alert>
-              )}
+                </AlertDescription>
+              </Alert>
+            )}
 
               {airdropSuccess && (
                 <Alert className="mt-2">
@@ -692,9 +694,9 @@ export default function DashboardPage() {
               <div className="mt-2 bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-blue-200 text-xs shadow-[0_12px_28px_-16px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl">
                 <div className="space-y-2">
                   <p>
-                    💡 {airdropToken === 'SOL' 
-                      ? 'SOL airdrop requests tokens directly from Solana devnet faucet. Tokens will arrive in a few seconds.'
-                      : 'USDC airdrop opens Circle Faucet website in a new tab. You can request 1 USDC every 2 hours per address. Complete the request on the Circle Faucet page.'}
+                💡 {airdropToken === 'SOL' 
+                  ? 'SOL airdrop requests tokens directly from Solana devnet faucet. Tokens will arrive in a few seconds.'
+                  : 'USDC airdrop opens Circle Faucet website in a new tab. You can request 1 USDC every 2 hours per address. Complete the request on the Circle Faucet page.'}
                   </p>
                   {airdropToken === 'SOL' && (
                     <a
@@ -868,7 +870,7 @@ export default function DashboardPage() {
       />
       {/* Logout Icon over marquee (desktop) */}
       <button
-          onClick={handleLogout}
+        onClick={handleLogout}
         className="absolute top-6 left-6 z-30 hidden lg:inline-flex rounded-full p-3 bg-black/70 border border-white/25 hover:bg-black/85 transition"
         title="Logout"
       >
@@ -990,27 +992,27 @@ export default function DashboardPage() {
 
           {/* Mobile: Marquee at bottom in flow, reduced height */}
           <div className="lg:hidden relative w-full h-28">
-          {/* Mobile Logout Icon (right aligned) */}
+            {/* Mobile Logout Icon (right aligned) */}
             <div className="absolute top-2 right-2 z-30 flex items-center gap-2">
-              <button
-                onClick={handleLogout}
+            <button
+              onClick={handleLogout}
                 className="rounded-full p-3 bg-black/70 border border-white/25 hover:bg-black/85 transition"
-                title="Logout"
+              title="Logout"
+            >
+              <svg
+                className="w-6 h-6 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                <svg
-                  className="w-6 h-6 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1"
-                  />
-                </svg>
-              </button>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1"
+                />
+              </svg>
+            </button>
             </div>
             <div className="absolute inset-0">
               <div className="absolute left-0 top-0 w-10 h-full bg-gradient-to-r from-black to-transparent z-10" />

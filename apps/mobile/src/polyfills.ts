@@ -1,7 +1,23 @@
 // CRITICAL: Import polyfills FIRST before any other imports
 // This is required for Solana Web3.js to work on React Native
 
+// CRITICAL: WebSocket polyfill MUST be FIRST (before any other imports)
+// rpc-websockets needs WebSocket available globally before it loads
+try {
+  const ReactNative = require('react-native');
+  if (ReactNative && ReactNative.WebSocket) {
+    (global as any).WebSocket = ReactNative.WebSocket;
+    // Also expose on globalThis for maximum compatibility
+    if (typeof (global as any).globalThis !== 'undefined') {
+      (global as any).globalThis.WebSocket = ReactNative.WebSocket;
+    }
+  }
+} catch (e) {
+  // Ignore if React Native not available yet
+}
+
 import 'react-native-get-random-values';
+import 'react-native-url-polyfill/auto';
 import 'text-encoding-polyfill';
 import { Readable } from 'readable-stream';
 import * as Crypto from 'expo-crypto';
@@ -11,7 +27,8 @@ import * as Crypto from 'expo-crypto';
 let Buffer: any;
 try {
   // Prefer buffer package (pure JS implementation)
-  Buffer = require('buffer').Buffer;
+  const { Buffer: BufferImpl } = require('buffer');
+  Buffer = BufferImpl;
   console.log('✅ Using buffer package (pure JS)');
 } catch (e) {
   // Fallback to react-native-buffer (may have JSI binding warnings in Expo Go)
@@ -143,7 +160,7 @@ try {
 }
 
 // Make Buffer globally available
-(global as any).Buffer = Buffer;
+global.Buffer = global.Buffer || Buffer;
 
 // Polyfill for process
 if (typeof (global as any).process === 'undefined') {
@@ -212,6 +229,12 @@ if (typeof (global as any).Event === 'undefined') {
   (global as any).Event = EventPolyfill;
 }
 
+// WebSocket already polyfilled at top of file
+// Just ensure it's exposed on window object
+if (typeof (global as any).WebSocket !== 'undefined') {
+  console.log('✅ WebSocket polyfill loaded');
+}
+
 // CRITICAL: Polyfill for window object (required by @lazorkit/wallet)
 // This creates a minimal window object with addEventListener
 // Must be defined BEFORE any modules try to access it
@@ -241,57 +264,43 @@ const windowPolyfill: any = {
     }
     return true;
   },
-  // window.open polyfill for mobile using WebView
-  // This opens URLs in a WebView modal and handles postMessage communication
-  // BUT: Block portal URLs when using native passkey
+  // window.open polyfill for mobile
+  // Actually opens URLs using Linking.openURL instead of just logging
   open: (url?: string, target?: string, features?: string) => {
     if (!url) {
       return null;
     }
 
-    // Check if this is a portal URL and we're using native passkey
-    const isPortalUrl = url.includes('portal.lazor.sh') || url.includes('lazor.sh');
-    const usingNativePasskey = !!(global as any).__USING_NATIVE_PASSKEY__;
+    console.log('🔄 window.open called on mobile:', url);
     
-    if (isPortalUrl && usingNativePasskey) {
-      console.log('🚫 Blocking portal URL (using native passkey):', url);
-      // Return a mock window object that won't actually open
-      return {
-        closed: false,
-        close: () => {},
-        postMessage: () => {},
-      } as any;
-    }
-
-    console.log('🔄 window.open called on mobile, opening WebView:', url);
-    
-    // Use WebViewManager to open WebView (lazy load to avoid circular dependencies)
+    // Actually open the URL using React Native Linking
     try {
-      // Lazy load webViewManager - use absolute path from src directory
-      const webViewManager = (global as any).__webViewManager;
-      if (webViewManager) {
-        return webViewManager.open(url);
-      } else {
-        // If not registered yet, try to require it
-        const { webViewManager: manager } = require('../src/utils/webViewManager');
-        (global as any).__webViewManager = manager;
-        return manager.open(url);
-      }
+      const { Linking } = require('react-native');
+      Linking.openURL(url).catch((err: any) => {
+        console.error('Failed to open URL:', err);
+      });
     } catch (e) {
-      console.error('❌ Failed to open WebView, using fallback:', e);
-      // Fallback: return a mock window object
+      console.error('Failed to require Linking:', e);
+    }
+    
+    // Return a minimal mock window object for compatibility
       const messageListeners = new Set<Function>();
+    let isClosed = false;
+    
       return {
-        closed: false,
+      get closed() {
+        return isClosed;
+      },
         location: { 
           href: url,
           origin: new URL(url).origin,
         },
         close: () => {
-          console.log('Fallback window.close() called');
+        console.log('Mock window.close() called');
+        isClosed = true;
         },
         postMessage: (message: any) => {
-          console.log('Fallback window.postMessage() called:', message);
+        console.log('Mock window.postMessage() called:', message);
         },
         addEventListener: (event: string, handler: Function) => {
           if (event === 'message') {
@@ -304,7 +313,6 @@ const windowPolyfill: any = {
           }
         },
       };
-    }
   },
   location: {
     origin: 'http://localhost',
@@ -322,6 +330,8 @@ const windowPolyfill: any = {
     createElement: () => ({}),
     body: {},
   },
+  // Expose WebSocket on window for browser compatibility
+  WebSocket: (global as any).WebSocket || (typeof WebSocket !== 'undefined' ? WebSocket : undefined),
 };
 
 // Assign to global.window AND make it available globally

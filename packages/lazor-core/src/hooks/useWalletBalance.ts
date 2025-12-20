@@ -49,11 +49,22 @@ export function useWalletBalance(
         }
 
         const network = useNetworkStore.getState().network;
-        const resolvedRpcUrl =
-          rpcUrl ||
-          (network === 'devnet'
-            ? process.env.NEXT_PUBLIC_LAZORKIT_RPC_URL_DEVNET
-            : process.env.NEXT_PUBLIC_LAZORKIT_RPC_URL);
+        
+        // Get RPC URL: check explicit param, then mobile globals, then process.env
+        let resolvedRpcUrl = rpcUrl;
+        if (!resolvedRpcUrl) {
+          if (network === 'devnet') {
+            resolvedRpcUrl =
+              (global as any).__LAZOR_MOBILE_RPC_URL_DEV__ ||
+              process.env.NEXT_PUBLIC_LAZORKIT_RPC_URL_DEVNET ||
+              '';
+          } else {
+            resolvedRpcUrl =
+              (global as any).__LAZOR_MOBILE_RPC_URL_MAIN__ ||
+              process.env.NEXT_PUBLIC_LAZORKIT_RPC_URL ||
+              '';
+          }
+        }
 
         if (!resolvedRpcUrl) {
           throw new Error('Missing Lazorkit RPC URL. Set NEXT_PUBLIC_LAZORKIT_RPC_URL or NEXT_PUBLIC_LAZORKIT_RPC_URL_DEVNET.');

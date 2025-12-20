@@ -1,10 +1,17 @@
-'use client';
+/**
+ * Mobile-specific authentication hook using @lazorkit/wallet-mobile-adapter
+ * 
+ * Follows React Native SDK docs exactly:
+ * - connect({ redirectUrl }) - required redirectUrl for deep linking
+ * - Uses LazorKitProvider from @lazorkit/wallet-mobile-adapter
+ */
 
 import { useState, useCallback, useEffect } from 'react';
-import { useLazorWallet } from './useLazorWallet';
-import type { PasskeyData, WalletState } from '../types';
-import { getStorage } from '../utils/storage';
-import { useNetworkStore } from '../state/networkStore';
+import { useWallet } from '@lazorkit/wallet-mobile-adapter';
+import Constants from 'expo-constants';
+import { useNetworkStore } from '@lazor-starter/core';
+import { getStorage } from '@lazor-starter/core';
+import type { PasskeyData, WalletState } from '@lazor-starter/core';
 
 const STORAGE_KEYS = {
   PASSKEY_DATA: 'lazorkit-passkey-data',
@@ -18,26 +25,21 @@ const STORAGE_KEYS = {
 };
 
 /**
- * Main authentication hook for Lazorkit Passkey and Smart Wallet
- *
- * Shared hook for monorepo (Web & Mobile).
- * Handles passkey creation, smart wallet registration, login, and logout.
- * Automatically persists session state across page reloads.
- *
- * @returns {Object} Authentication state and methods
- * @returns {boolean} returns.isLoggedIn - True if user has both passkey and wallet
- * @returns {boolean} returns.hasPasskey - True if passkey exists
- * @returns {boolean} returns.hasWallet - True if smart wallet is created
- * @returns {string|undefined} returns.pubkey - Wallet public key address
- * @returns {PasskeyData|undefined} returns.passkeyData - Passkey credential data
- * @returns {boolean} returns.isInitialized - True when initial state is loaded
- * @returns {() => Promise<PasskeyData>} returns.loginWithPasskey - Create/authenticate with passkey
- * @returns {(passkeyData: PasskeyData) => Promise<string>} returns.createSmartWallet - Create smart wallet from passkey
- * @returns {() => Promise<{passkeyData: PasskeyData, walletAddress: string}>} returns.registerNewWallet - Register new wallet (passkey + smart wallet)
- * @returns {() => Promise<void>} returns.logout - Clear session and logout
+ * Get redirect URL from app scheme
  */
-export function useLazorAuth() {
-  const wallet = useLazorWallet();
+function getRedirectUrl(): string {
+  const scheme = Constants.expoConfig?.scheme || 'lazor-starter';
+  return `${scheme}://home`;
+}
+
+/**
+ * Mobile authentication hook using React Native SDK
+ * 
+ * Provides the same API as useLazorAuth but uses @lazorkit/wallet-mobile-adapter
+ * with proper redirectUrl handling for deep linking.
+ */
+export function useMobileAuth() {
+  const { connect, disconnect, wallet, isConnected } = useWallet();
   const network = useNetworkStore((state) => state.network);
   const [state, setState] = useState<WalletState>({
     hasPasskey: false,
@@ -45,15 +47,8 @@ export function useLazorAuth() {
   });
   const [isInitialized, setIsInitialized] = useState(false);
 
+  // Initialize state from storage
   useEffect(() => {
-    /**
-     * Initializes authentication state from persistent storage
-     *
-     * Loads passkey data, wallet address, and authentication state
-     * from localStorage (Web) or AsyncStorage (Mobile).
-     *
-     * @returns Promise that resolves when initialization is complete
-     */
     const initState = async () => {
       const storage = getStorage();
       if (!storage) {
@@ -100,47 +95,38 @@ export function useLazorAuth() {
     initState();
   }, [network]);
 
+  // Sync with wallet connection state
   useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
+    if (isConnected && wallet?.smartWallet) {
+      const currentPubkey = state.pubkey;
+      if (currentPubkey !== wallet.smartWallet) {
+        // Wallet connected but state not synced
+        const passkeyData: PasskeyData = {
+          credentialId: wallet.credentialId || '',
+          userId: wallet.walletDevice || 'mobile',
+          publicKey: {
+            x: '',
+            y: '',
+          },
+          smartWalletAddress: wallet.smartWallet,
+          smartWalletId: wallet.smartWallet,
+        };
 
-    /**
-     * Reconnects wallet if passkey data exists but wallet is not connected
-     *
-     * Automatically attempts to reconnect the wallet when passkey data
-     * is available but the wallet connection is lost.
-     *
-     * @returns Promise that resolves when reconnection attempt completes
-     */
-    const reconnectWallet = async () => {
-      if (!state.passkeyData) {
-        return;
-      }
+        const newState: WalletState = {
+          hasPasskey: true,
+          hasWallet: true,
+          pubkey: wallet.smartWallet,
+          passkeyData,
+        };
 
-      if (!(wallet as any)?.isConnected && !wallet?.signAndSendTransaction) {
-        try {
-          await new Promise(resolve => setTimeout(resolve, 300));
-          
-          if (wallet?.connect && typeof wallet.connect === 'function') {
-            await wallet.connect({ feeMode: 'paymaster' });
-          }
-        } catch (error) {
-          // Ignore auto-connect errors
-        }
+        setState(newState);
+        saveToStorage(newState);
       }
-    };
-    
-    if (isInitialized && state.passkeyData) {
-      reconnectWallet();
     }
-  }, [isInitialized, state.passkeyData, wallet]);
+  }, [isConnected, wallet, state.pubkey]);
 
   /**
-   * Saves wallet state to persistent storage
-   *
-   * @param newState - Partial wallet state to save
-   * @returns Promise that resolves when save is complete
+   * Save wallet state to storage
    */
   const saveToStorage = useCallback(
     async (newState: Partial<WalletState>) => {
@@ -199,71 +185,32 @@ export function useLazorAuth() {
   );
 
   /**
-   * Creates or authenticates with a passkey using Lazorkit SDK
-   *
-   * Falls back to wallet.connect() for SDK builds without createPasskeyOnly.
-   *
-   * @returns Promise resolving to passkey credential data
-   * @throws Error if passkey creation or authentication fails
+   * Login with passkey using mobile adapter
+   * 
+   * Uses connect({ redirectUrl }) as per React Native SDK docs
    */
   const loginWithPasskey = useCallback(async (): Promise<PasskeyData> => {
-    const currentNetwork = useNetworkStore.getState().network;
     try {
-      // Web + mobile đều dùng cùng LazorKit React SDK (web) qua polyfills.
-      // Nếu SDK hỗ trợ createPasskeyOnly thì ưu tiên dùng, ngược lại dùng connect().
-      if (wallet?.createPasskeyOnly) {
-        const passkeyData = await wallet.createPasskeyOnly();
-        if (!passkeyData) {
-          throw new Error('Failed to login with passkey');
-        }
+      const redirectUrl = getRedirectUrl();
+      
+      // Connect using mobile adapter with redirectUrl
+      const connectedWallet = await connect({
+        redirectUrl,
+        onSuccess: (wallet) => {
+          console.log('✅ Mobile wallet connected:', wallet.smartWallet);
+        },
+        onFail: (error) => {
+          console.error('❌ Mobile wallet connection failed:', error);
+        },
+      });
 
-        const storage = getStorage();
-        let storedWalletId: string | null = null;
-        if (storage) {
-          try {
-            const smartWalletIdKey = currentNetwork === 'devnet' ? STORAGE_KEYS.SMART_WALLET_ID_DEVNET : STORAGE_KEYS.SMART_WALLET_ID_MAINNET;
-            storedWalletId =
-              (await Promise.resolve(storage.getItem(smartWalletIdKey))) || null;
-          } catch (error) {
-            // Ignore storage read errors
-          }
-        }
-
-        const enrichedPasskeyData = storedWalletId
-          ? {
-              ...passkeyData,
-              smartWalletId: storedWalletId,
-              walletId: storedWalletId,
-              smartWalletID: storedWalletId,
-            }
-          : passkeyData;
-
-        const newState: WalletState = {
-          hasPasskey: true,
-          hasWallet: state.hasWallet,
-          pubkey: state.pubkey,
-          passkeyData: enrichedPasskeyData as PasskeyData,
-        };
-
-        setState(newState);
-        await saveToStorage(newState);
-
-        return enrichedPasskeyData as PasskeyData;
-      }
-
-      if (!wallet?.connect) {
-        throw new Error('Passkey login not available. Make sure LazorProvider is set up correctly.');
-      }
-
-      // Web flow chuẩn của LazorKit React SDK: connect({ feeMode: "paymaster" })
-      const connectedWallet = await wallet.connect({ feeMode: 'paymaster' });
       if (!connectedWallet?.smartWallet) {
         throw new Error('Passkey login failed: missing smart wallet address');
       }
 
       const passkeyData: PasskeyData = {
         credentialId: connectedWallet.credentialId || '',
-        userId: connectedWallet.walletDevice || 'web',
+        userId: connectedWallet.walletDevice || 'mobile',
         publicKey: {
           x: '',
           y: '',
@@ -286,24 +233,13 @@ export function useLazorAuth() {
     } catch (error) {
       throw error;
     }
-  }, [wallet, state.hasWallet, state.pubkey, saveToStorage, network]);
+  }, [connect, saveToStorage]);
 
   /**
-   * Creates a smart wallet on-chain using passkey data
-   *
-   * @param passkeyData - Passkey credential data from loginWithPasskey
-   * @returns Promise resolving to wallet public key address
-   * @throws Error if wallet creation fails or API call fails
+   * Create smart wallet on-chain
    */
   const createSmartWallet = useCallback(
     async (passkeyData: PasskeyData): Promise<string> => {
-      if (!wallet?.createSmartWalletOnly && !wallet?.createSmartWallet) {
-        if (state.pubkey) {
-          return state.pubkey;
-        }
-        throw new Error('Smart wallet creation not available');
-      }
-
       try {
         const currentNetwork = useNetworkStore.getState().network;
         const storage = getStorage();
@@ -327,27 +263,8 @@ export function useLazorAuth() {
             }
           : passkeyData;
 
-        let apiBase = '';
-        
-        if (typeof window !== 'undefined') {
-          const envApiBase = 
-          process.env.NEXT_PUBLIC_API_BASE_URL ||
-            (window as any).process?.env?.NEXT_PUBLIC_API_BASE_URL;
-          
-          if (envApiBase && envApiBase !== 'http://localhost:3001') {
-            apiBase = envApiBase;
-          } else {
-            apiBase = window.location.origin;
-          }
-        } else {
-          const mobileApiBase = (global as any).__LAZOR_MOBILE_API_BASE__;
-          if (mobileApiBase) {
-            apiBase = mobileApiBase;
-          } else {
-            apiBase = 'http://localhost:3001';
-          }
-        }
-
+        const mobileApiBase = (global as any).__LAZOR_MOBILE_API_BASE__;
+        const apiBase = mobileApiBase || 'http://localhost:3001';
         const apiUrl = `${apiBase}/api/orders/create-smart-wallet`;
         
         const response = await fetch(apiUrl, {
@@ -355,7 +272,7 @@ export function useLazorAuth() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
             passkeyData: enrichedPasskeyData,
-            network: useNetworkStore.getState().network === 'devnet' ? 'devnet' : 'mainnet',
+            network: currentNetwork === 'devnet' ? 'devnet' : 'mainnet',
           }),
         });
 
@@ -390,23 +307,16 @@ export function useLazorAuth() {
         setState(newState);
         await saveToStorage(newState);
 
-        if (typeof window !== 'undefined') {
-          await new Promise(resolve => setTimeout(resolve, 800));
-        }
-
         return walletAddress;
       } catch (error) {
         throw error;
       }
     },
-    [wallet, saveToStorage, network]
+    [saveToStorage]
   );
 
   /**
-   * Registers a new wallet by creating both passkey and smart wallet
-   *
-   * @returns Promise resolving to passkey data and wallet address
-   * @throws Error if registration fails at any step
+   * Register new wallet (passkey + smart wallet)
    */
   const registerNewWallet = useCallback(async (): Promise<{
     passkeyData: PasskeyData;
@@ -414,26 +324,28 @@ export function useLazorAuth() {
   }> => {
     const passkeyData = await loginWithPasskey();
     const walletAddress = await createSmartWallet(passkeyData);
-
     return { passkeyData, walletAddress };
-  }, [wallet, loginWithPasskey, createSmartWallet, state.pubkey]);
+  }, [loginWithPasskey, createSmartWallet]);
 
   /**
-   * Logs out user by disconnecting wallet and clearing all stored session data
-   *
-   * @returns Promise that resolves when logout is complete
+   * Logout
    */
   const logout = useCallback(async () => {
-    // Disconnect wallet from Lazorkit SDK first
-    if (wallet?.disconnect && typeof wallet.disconnect === 'function') {
+    if (disconnect && typeof disconnect === 'function') {
       try {
-        await wallet.disconnect();
+        await disconnect({
+          onSuccess: () => {
+            console.log('✅ Mobile wallet disconnected');
+          },
+          onFail: (e) => {
+            console.error('❌ Mobile wallet disconnect failed:', e);
+          },
+        });
       } catch (error) {
-        // Ignore disconnect errors, continue with cleanup
+        // Ignore disconnect errors
       }
     }
 
-    // Clear storage (both mainnet and devnet)
     const storage = getStorage();
     if (storage) {
       try {
@@ -450,14 +362,13 @@ export function useLazorAuth() {
       }
     }
 
-    // Reset state
     setState({
       hasPasskey: false,
       hasWallet: false,
       pubkey: undefined,
       passkeyData: undefined,
     });
-  }, [wallet]);
+  }, [disconnect]);
 
   return {
     isLoggedIn: state.hasPasskey && state.hasWallet,
@@ -472,3 +383,4 @@ export function useLazorAuth() {
     logout,
   };
 }
+

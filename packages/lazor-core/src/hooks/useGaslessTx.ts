@@ -25,15 +25,6 @@ export function useGaslessTx() {
   const wallet = useLazorWallet();
   const { pubkey, isLoggedIn } = useLazorAuth();
   const network = useNetworkStore((state) => state.network);
-  const getEnv = (keys: string[]) => {
-    for (const key of keys) {
-      const value =
-        (typeof window !== 'undefined' ? (window as any).process?.env?.[key] : undefined) ||
-        process.env[key];
-      if (value) return value;
-    }
-    return undefined;
-  };
 
   /**
    * Sends a transaction with multiple instructions through Lazorkit Paymaster
@@ -58,14 +49,12 @@ export function useGaslessTx() {
         throw new Error('No instructions provided for transaction');
       }
       
-      // Validate all instructions before sending
       for (const ix of instructions) {
         if (!ix || !ix.programId) {
           throw new Error('Invalid instruction provided');
         }
       }
       
-      // Get wallet address for validation
       const activeAddress = 
         pubkey || 
         (wallet as any)?.smartWallet || 
@@ -77,35 +66,28 @@ export function useGaslessTx() {
         throw new Error('No wallet address. Please login first.');
       }
       
-      // Validate PublicKey format
       try {
         new PublicKey(activeAddress);
       } catch (error) {
         throw new Error(`Invalid wallet address: ${activeAddress}`);
       }
       
-      // Prepare transaction options according to Lazorkit SDK v2.0.0 API
       const transactionOptions: {
         feeToken?: string;
         computeUnitLimit?: number;
         clusterSimulation?: 'devnet' | 'mainnet';
       } = {};
       
-      // Add feeToken if specified in options
       if (options?.feeToken) {
         transactionOptions.feeToken = options.feeToken;
       }
       
-      // Add computeUnitLimit if specified
       if (options?.computeUnitLimit) {
         transactionOptions.computeUnitLimit = options.computeUnitLimit;
       }
       
-      // Set clusterSimulation based on current network (always set)
       transactionOptions.clusterSimulation = network;
-      
-      // Call signAndSendTransaction with new API format
-      // API: signAndSendTransaction({ instructions, transactionOptions })
+
       return await wallet.signAndSendTransaction({
         instructions,
         transactionOptions,
@@ -152,17 +134,23 @@ export function useGaslessTx() {
     amount: number,
     options?: GaslessTxOptions
   ): Promise<string> => {
-    const activeAddress = 
-      pubkey || 
-      (wallet as any)?.smartWallet || 
-      (wallet as any)?.smartWalletPubkey?.toBase58?.() ||
-      (wallet as any)?.address || 
-      (wallet as any)?.publicKey?.toBase58?.();
-    if (!activeAddress) {
-      throw new Error('No wallet address. Please login first.');
+    let ownerPublicKey: PublicKey;
+    
+    if ((wallet as any)?.smartWalletPubkey instanceof PublicKey) {
+      ownerPublicKey = (wallet as any).smartWalletPubkey;
+    } else {
+      const activeAddress = 
+        pubkey || 
+        (wallet as any)?.smartWallet || 
+        (wallet as any)?.smartWalletPubkey?.toBase58?.() ||
+        (wallet as any)?.address || 
+        (wallet as any)?.publicKey?.toBase58?.();
+      if (!activeAddress) {
+        throw new Error('No wallet address. Please login first.');
+      }
+      ownerPublicKey = new PublicKey(activeAddress);
     }
 
-    const ownerPublicKey = new PublicKey(activeAddress);
     const recipientPublicKey = new PublicKey(recipient);
     const lamports = Math.round(amount * 1e9);
 
@@ -193,22 +181,27 @@ export function useGaslessTx() {
     decimals: number = 6,
     options?: GaslessTxOptions
   ): Promise<string> => {
-    const activeAddress = 
-      pubkey || 
-      (wallet as any)?.smartWallet || 
-      (wallet as any)?.smartWalletPubkey?.toBase58?.() ||
-      (wallet as any)?.address || 
-      (wallet as any)?.publicKey?.toBase58?.();
-    if (!activeAddress) {
-      throw new Error('No wallet address. Please login first.');
+    let smartWalletPubkey: PublicKey;
+    
+    if ((wallet as any)?.smartWalletPubkey instanceof PublicKey) {
+      smartWalletPubkey = (wallet as any).smartWalletPubkey;
+    } else {
+      const activeAddress = 
+        pubkey || 
+        (wallet as any)?.smartWallet || 
+        (wallet as any)?.smartWalletPubkey?.toBase58?.() ||
+        (wallet as any)?.address || 
+        (wallet as any)?.publicKey?.toBase58?.();
+      if (!activeAddress) {
+        throw new Error('No wallet address. Please login first.');
+      }
+      smartWalletPubkey = new PublicKey(activeAddress);
     }
 
-    const smartWalletPubkey = new PublicKey(activeAddress);
     const recipientPublicKey = new PublicKey(recipient);
     const mintPublicKey = new PublicKey(tokenMint);
     const rawAmount = Math.round(amount * Math.pow(10, decimals));
 
-    // Get ATA for smart wallet (sender)
     const ATA = getAssociatedTokenAddressSync(
       mintPublicKey,
       smartWalletPubkey,
@@ -217,7 +210,6 @@ export function useGaslessTx() {
       ASSOCIATED_TOKEN_PROGRAM_ID
     );
 
-    // Get ATA for recipient
     const recipientATA = getAssociatedTokenAddressSync(
       mintPublicKey,
       recipientPublicKey,
@@ -226,7 +218,6 @@ export function useGaslessTx() {
       ASSOCIATED_TOKEN_PROGRAM_ID
     );
 
-    // Create transfer instruction
     const instruction = createTransferInstruction(
       ATA,
       recipientATA,
@@ -234,7 +225,6 @@ export function useGaslessTx() {
       rawAmount
     );
 
-    // Send transaction
     return await sendTransaction([instruction], options);
   }, [wallet, pubkey, sendTransaction]);
 

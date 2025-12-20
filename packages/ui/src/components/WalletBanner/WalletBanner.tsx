@@ -177,9 +177,9 @@ export function WalletBanner({
             </div>
           </div>
 
-          {/* Right Side - Lazorkit Logo */}
+          {/* Right Side - LazorKit Logo */}
           <div className="text-white font-bold text-lg md:text-xl tracking-wider drop-shadow-lg flex-shrink-0 ml-4">
-            Lazorkit
+            LazorKit
           </div>
         </div>
 

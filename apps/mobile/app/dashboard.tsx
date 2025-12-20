@@ -1,255 +1,617 @@
-import { View, StyleSheet, ScrollView } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Linking,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
+import { Copy, LogOut, Info, Link2, AlertCircle, CheckCircle } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { useLazorAuth, useGaslessTx } from '@lazor-starter/core';
-import { Button, Card, CardContent, CardHeader, CardTitle, Input, Label, Text, Alert, AlertDescription } from '@lazor-starter/ui';
-import { AlertCircle, CheckCircle2, Info } from 'lucide-react-native';
-import { useState } from 'react';
+import {
+  useWalletBalance,
+  useAirdrop,
+  useNetworkStore,
+  TOKEN_MINTS,
+} from '@lazor-starter/core';
+import { useMobileAuth } from '../src/hooks/useMobileAuth';
+import { useMobileGaslessTx } from '../src/hooks/useMobileGaslessTx';
+import {
+  Button,
+  Input,
+  Card,
+  CardContent,
+  Text,
+  WalletBanner,
+  Tabs,
+  type TabItem,
+} from '@lazor-starter/ui';
+import { useState, useMemo, useEffect } from 'react';
+import * as Clipboard from 'expo-clipboard';
 
+/**
+ * Dashboard screen component for mobile app
+ *
+ * Displays wallet information, transfer, and airdrop functionality.
+ * Uses tabs for Transfer and Airdrop sections.
+ *
+ * @returns Dashboard screen component
+ */
 export default function DashboardScreen() {
   const router = useRouter();
-  const { pubkey, logout } = useLazorAuth();
-  const { transferSOL, transferSPLToken } = useGaslessTx();
-  const [recipient, setRecipient] = useState('');
-  const [amount, setAmount] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  
-  const [usdcRecipient, setUsdcRecipient] = useState('');
-  const [usdcAmount, setUsdcAmount] = useState('');
-  const [usdcLoading, setUsdcLoading] = useState(false);
-  const [usdcError, setUsdcError] = useState<string | null>(null);
-  const [usdcSuccess, setUsdcSuccess] = useState<string | null>(null);
-  
-  const USDC_DEVNET_MINT = '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU';
+  const { pubkey, logout, isInitialized, isLoggedIn } = useMobileAuth();
+  const { transferSOL, transferSPLToken } = useMobileGaslessTx();
+  const { requestSOLAirdrop, requestUSDCAirdrop, loading: airdropLoading } = useAirdrop();
+  const { network, setNetwork } = useNetworkStore();
 
-  if (!pubkey) {
+  // Select correct USDC mint by network
+  const usdcMintAddress = useMemo(
+    () => (network === 'devnet' ? TOKEN_MINTS.USDC_DEVNET : TOKEN_MINTS.USDC_MAINNET),
+    [network]
+  );
+  const defaultMint = usdcMintAddress;
+
+  // Fetch balances onchain (SOL + network-specific USDC)
+  const { solBalance, usdcBalance, solBalanceText, usdcBalanceText } = useWalletBalance(
+    pubkey,
+    usdcMintAddress
+  );
+  const solAmountValue = solBalance ?? 0;
+  const usdcAmountValue = usdcBalance ?? 0;
+
+  // Unified Transfer State
+  const [transferRecipient, setTransferRecipient] = useState('');
+  const [transferAmount, setTransferAmount] = useState('');
+  const [transferToken, setTransferToken] = useState<'SOL' | 'USDC'>('SOL');
+  const [transferLoading, setTransferLoading] = useState(false);
+  const [transferError, setTransferError] = useState<string | null>(null);
+  const [transferSuccess, setTransferSuccess] = useState<string | null>(null);
+  const [transferSignature, setTransferSignature] = useState<string | null>(null);
+
+  // Airdrop State
+  const [airdropAmount, setAirdropAmount] = useState<string>('1');
+  const [airdropToken, setAirdropToken] = useState<'SOL' | 'USDC'>('SOL');
+  const [airdropError, setAirdropError] = useState<string | null>(null);
+  const [airdropSuccess, setAirdropSuccess] = useState<string | null>(null);
+  
+  // Tab state
+  const [activeTab, setActiveTab] = useState<string>('transfer');
+
+  // Redirect to home if not logged in
+  useEffect(() => {
+    if (isInitialized && (!isLoggedIn || !pubkey)) {
     router.replace('/');
+    }
+  }, [isInitialized, isLoggedIn, pubkey, router]);
+
+  if (!isInitialized) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
+
+  if (!isLoggedIn || !pubkey) {
     return null;
   }
 
-  const handleTransferSOL = async () => {
-    if (!recipient || !amount) {
-      setError('Please enter recipient and amount');
-      return;
-    }
+  /**
+   * Formats error messages to be more user-friendly
+   *
+   * @param error - The error object or string to format
+   * @returns Formatted error message string
+   */
+  const formatErrorMessage = (error: any): string => {
+    if (!error) return 'An unknown error occurred';
 
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
+    const errorMessage = error?.message || error?.toString() || 'An unknown error occurred';
 
     try {
-      const amountNum = parseFloat(amount);
-      if (isNaN(amountNum) || amountNum <= 0) {
-        throw new Error('Invalid amount');
+      const jsonMatch = errorMessage.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (parsed?.error?.message) {
+          return parsed.error.message;
+        }
       }
 
-      // CRITICAL: Real onchain transaction on devnet (gasless via Paymaster)
-      // This is 100% onchain - no mocks, no fake data
-      const signature = await transferSOL(recipient, amountNum);
-      setSuccess(`Transaction sent! Signature: ${signature.slice(0, 16)}...`);
-      setRecipient('');
-      setAmount('');
-    } catch (e: any) {
-      console.error('Transfer failed:', e);
-      setError(e?.message || 'Transfer failed');
-    } finally {
-      setLoading(false);
+      if (errorMessage.toLowerCase().includes('rate limit')) {
+        return 'Rate limit exceeded. The devnet faucet has a limit of 1 SOL per project per day. Please try again later.';
+      }
+
+      if (errorMessage.includes('403')) {
+        return 'Request denied. You may have exceeded the rate limit. Please try again later.';
+      }
+
+      if (errorMessage.includes('timeout') || errorMessage.includes('timed out')) {
+        return 'Request timed out. Please check your connection and try again.';
+      }
+
+      if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+        return 'Network error. Please check your internet connection and try again.';
+      }
+    } catch {
+      // If parsing fails, return the original message
     }
+
+    return errorMessage;
   };
 
   /**
-   * Handles USDC transfer transaction
+   * Handles unified transfer (SOL / USDC)
+   *
+   * @throws Error if recipient or amount is invalid
    */
-  const handleTransferUSDC = async () => {
-    if (!usdcRecipient || !usdcAmount) {
-      setUsdcError('Please enter recipient and amount');
+  const handleTransfer = async () => {
+    if (!transferRecipient || !transferAmount) {
+      setTransferError('Please enter recipient and amount');
       return;
     }
 
-    setUsdcLoading(true);
-    setUsdcError(null);
-    setUsdcSuccess(null);
+    setTransferLoading(true);
+    setTransferError(null);
+    setTransferSuccess(null);
+    setTransferSignature(null);
 
     try {
-      const amountNumber = parseFloat(usdcAmount);
+      const amountNumber = parseFloat(transferAmount);
       if (isNaN(amountNumber) || amountNumber <= 0) {
         throw new Error('Invalid amount');
       }
 
-      const signature = await transferSPLToken(
-        usdcRecipient,
-        amountNumber,
-        USDC_DEVNET_MINT,
-        6
-      );
-      setUsdcSuccess(`USDC sent! Signature: ${signature.slice(0, 16)}...`);
-      setUsdcRecipient('');
-      setUsdcAmount('');
+      let signature: string;
+      if (transferToken === 'SOL') {
+        signature = await transferSOL(transferRecipient, amountNumber);
+      } else {
+        signature = await transferSPLToken(transferRecipient, amountNumber, defaultMint, 6);
+      }
+      setTransferSuccess(`Transaction sent! Signature: ${signature.slice(0, 16)}...`);
+      setTransferSignature(signature);
+      setTransferRecipient('');
+      setTransferAmount('');
     } catch (error: any) {
-      console.error('USDC transfer failed:', error);
-      setUsdcError(error?.message || 'USDC transfer failed');
+      setTransferError(error?.message || 'Transfer failed');
     } finally {
-      setUsdcLoading(false);
+      setTransferLoading(false);
     }
   };
 
+  /**
+   * Resets transfer form state to initial values
+   */
+  const handleResetTransfer = () => {
+    setTransferRecipient('');
+    setTransferAmount('');
+    setTransferError(null);
+    setTransferSuccess(null);
+    setTransferSignature(null);
+  };
+
+  /**
+   * Handles airdrop request for SOL or USDC
+   *
+   * @returns Promise that resolves when airdrop is requested
+   */
+  const handleAirdrop = async () => {
+    if (!pubkey) {
+      setAirdropError('Wallet not connected');
+      return;
+    }
+
+    if (airdropToken === 'SOL') {
+      const amount = parseFloat(airdropAmount);
+      if (isNaN(amount) || amount <= 0) {
+        setAirdropError('Please enter a valid amount');
+        return;
+      }
+    }
+
+    setAirdropError(null);
+    setAirdropSuccess(null);
+
+    try {
+      if (airdropToken === 'SOL') {
+        const amount = parseFloat(airdropAmount);
+        await requestSOLAirdrop(pubkey, amount);
+        setAirdropSuccess(`SOL airdrop requested! ${amount} SOL will arrive shortly.`);
+      } else {
+        await requestUSDCAirdrop(pubkey, 1);
+        setAirdropSuccess(
+          `Circle Faucet opened. Please complete the USDC request there. Rate limit: 1 USDC every 2 hours per address.`
+        );
+      }
+    } catch (error: any) {
+      setAirdropError(formatErrorMessage(error));
+    }
+  };
+
+  /**
+   * Handles logout action
+   */
   const handleLogout = () => {
     logout();
+    setAirdropError(null);
+    setAirdropSuccess(null);
+    setTransferError(null);
+    setTransferSuccess(null);
+    setNetwork('mainnet');
     router.replace('/');
   };
 
+  /**
+   * Handles clipboard paste for recipient address
+   */
+  const handlePasteAddress = async () => {
+    try {
+      const text = await Clipboard.getStringAsync();
+      setTransferRecipient(text);
+      setTransferError(null);
+    } catch {
+      setTransferError('Clipboard unavailable');
+    }
+  };
+
+  const tabItems: TabItem[] = [
+    {
+      value: 'transfer',
+      label: 'Transfer',
+      content: (
+        <View style={styles.tabContent}>
+          <Card style={styles.formCard}>
+            <CardContent style={styles.cardContent}>
+              <View style={styles.formSection}>
+                {/* Token Selector */}
+                <View style={styles.tokenSelectorRow}>
+                  {[
+                    { value: 'SOL' as const, label: 'SOL', balance: solBalanceText },
+                    { value: 'USDC' as const, label: 'USDC', balance: usdcBalanceText || 'Balance —' },
+                  ].map((item) => {
+                    const active = transferToken === item.value;
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text variant="h1" className="text-3xl font-bold text-white">Dashboard</Text>
-        <View className="flex-row gap-2">
-          <Button
-            onPress={() => router.push('/store')}
-            variant="outline"
-            className="bg-blue-600 border-blue-500"
-          >
-            <Text>Store</Text>
-          </Button>
-          <Button
-            onPress={handleLogout}
-            variant="outline"
-            className="bg-gray-700 border-gray-600"
-          >
-            <Text>Logout</Text>
-          </Button>
+                      <TouchableOpacity
+                        key={item.value}
+                        onPress={() => {
+                          setTransferToken(item.value);
+                          setTransferAmount('');
+                          setTransferRecipient('');
+                          setTransferError(null);
+                          setTransferSuccess(null);
+                          setTransferSignature(null);
+                        }}
+                        style={[
+                          styles.tokenButton,
+                          active ? styles.tokenButtonActive : styles.tokenButtonInactive,
+                        ]}
+                      >
+                        <View>
+                          <Text style={styles.tokenLabel}>{item.label}</Text>
+                          <Text style={styles.tokenBalance}>{item.balance}</Text>
+                        </View>
+                        <View style={styles.radioOuter}>
+                          {active && <View style={styles.radioInner} />}
         </View>
+                      </TouchableOpacity>
+                    );
+                  })}
       </View>
 
-      <Card className="bg-gray-900 border-gray-800 mx-5 mb-5">
-        <CardHeader>
-          <CardTitle className="text-sm text-gray-400">Wallet Address</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Text className="text-white font-mono text-sm break-all">{pubkey}</Text>
-        </CardContent>
-      </Card>
-
-      <Card className="bg-gray-900 border-gray-800 mx-5 mb-5">
-        <CardHeader>
-          <CardTitle className="text-xl font-semibold text-white">Transfer SOL (Gasless)</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <View className="space-y-2">
-            <Label className="text-gray-400">Recipient Address</Label>
+                {/* Recipient Address */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Recipient Address</Text>
+                  <View style={styles.inputWithButton}>
             <Input
-              value={recipient}
-              onChangeText={setRecipient}
-              placeholder="Enter Solana address"
+                      value={transferRecipient}
+                      onChangeText={setTransferRecipient}
+                      placeholder="Enter recipient address"
               autoCapitalize="none"
               autoCorrect={false}
-              className="bg-gray-800 border-gray-700 text-white"
+                      style={styles.inputField}
+                      {...({} as any)}
             />
+                    <TouchableOpacity onPress={handlePasteAddress} style={styles.pasteButton}>
+                      <Copy size={16} color="#9CA3AF" />
+                    </TouchableOpacity>
+                  </View>
           </View>
 
-          <View className="space-y-2">
-            <Label className="text-gray-400">Amount (SOL)</Label>
+                {/* Amount */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Amount ({transferToken})</Text>
             <Input
-              value={amount}
-              onChangeText={setAmount}
-              placeholder="0.0"
+                    value={transferAmount}
+                    onChangeText={setTransferAmount}
+                    placeholder="Enter Amount"
               keyboardType="decimal-pad"
-              className="bg-gray-800 border-gray-700 text-white"
-            />
+                    style={styles.amountInput}
+                    {...({} as any)}
+                  />
+                  <View style={styles.quickAmountRow}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        const balance = transferToken === 'SOL' ? solAmountValue : usdcAmountValue;
+                        setTransferAmount((balance / 2).toString());
+                      }}
+                      style={styles.quickAmountButton}
+                    >
+                      <Text style={styles.quickAmountText}>Half</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() =>
+                        setTransferAmount(
+                          transferToken === 'SOL' ? solAmountValue.toString() : usdcAmountValue.toString()
+                        )
+                      }
+                      style={styles.quickAmountButton}
+                    >
+                      <Text style={styles.quickAmountText}>Max</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
           </View>
 
-          <Button
-            onPress={handleTransferSOL}
-            disabled={loading || !recipient || !amount}
-            className="w-full bg-green-600"
+              {/* Actions */}
+              <View style={styles.actionRow}>
+                <TouchableOpacity onPress={handleResetTransfer} style={styles.cancelButton}>
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleTransfer}
+                  disabled={transferLoading || !transferRecipient || !transferAmount}
+                  style={[
+                    styles.nextButton,
+                    (transferLoading || !transferRecipient || !transferAmount) && styles.buttonDisabled,
+                  ]}
           >
-            <Text>{loading ? 'Sending...' : 'Send SOL (Gasless)'}</Text>
-          </Button>
+                  <Text style={styles.nextButtonText}>{transferLoading ? 'Sending...' : 'Next →'}</Text>
+                </TouchableOpacity>
+              </View>
 
-          {error && (
-            <Alert variant="destructive" icon={AlertCircle} className="bg-red-900/50 border-red-500">
-              <AlertDescription className="text-red-200 text-sm">
-                {error}
-              </AlertDescription>
-            </Alert>
+              {/* Error */}
+              {transferError && (
+                <View style={styles.errorAlert}>
+                  <View style={styles.errorRow}>
+                    <AlertCircle size={16} color="#FCA5A5" />
+                    <Text style={styles.errorAlertText}>{formatErrorMessage(transferError)}</Text>
+                  </View>
+                </View>
           )}
 
-          {success && (
-            <Alert icon={CheckCircle2} className="bg-green-900/50 border-green-500">
-              <AlertDescription className="text-green-200 text-sm">
-                {success}
-              </AlertDescription>
-            </Alert>
+              {/* Success */}
+              {transferSuccess && (
+                <View style={styles.successAlert}>
+                  <View style={styles.successRow}>
+                    <CheckCircle size={16} color="#86EFAC" />
+                    <Text style={styles.successAlertText}>{transferSuccess}</Text>
+                  </View>
+                  {transferSignature && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        const cluster = network === 'devnet' ? '?cluster=devnet' : '';
+                        Linking.openURL(`https://solscan.io/tx/${transferSignature}${cluster}`);
+                      }}
+                      style={{ marginTop: 8, marginLeft: 24 }}
+                    >
+                      <Text style={styles.linkText}>View on Solscan →</Text>
+                    </TouchableOpacity>
           )}
+                </View>
+              )}
 
-          <Alert icon={Info} className="bg-blue-900/30 border-blue-500/50">
-            <AlertDescription className="text-blue-200 text-xs">
-              🎉 Gasless transaction! You saved on gas fees thanks to Lazorkit!
-            </AlertDescription>
-          </Alert>
+              {/* Info */}
+              <View style={styles.infoBox}>
+                <View style={styles.infoRow}>
+                  <Info size={16} color="#9CA3AF" />
+                  <Text style={styles.infoText}>
+                    Gasless transaction! You saved on gas fees thanks to Lazorkit!
+                  </Text>
+                </View>
+              </View>
         </CardContent>
       </Card>
+        </View>
+      ),
+    },
+    {
+      value: 'airdrop',
+      label: 'Airdrop',
+      disabled: network !== 'devnet',
+      content: (
+        <View style={styles.tabContent}>
+          <Card style={styles.formCard}>
+            <CardContent style={styles.cardContent}>
+              <View style={styles.airdropHeader}>
+                <Text style={styles.airdropTitle}>Devnet Airdrop</Text>
+                <Text style={styles.airdropSubtitle}>Request SOL or USDC from devnet faucet</Text>
+              </View>
 
-      <Card className="bg-gray-900 border-gray-800 mx-5 mb-5">
-        <CardHeader>
-          <CardTitle className="text-xl font-semibold text-white">Transfer USDC (Gasless)</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <View className="space-y-2">
-            <Label className="text-gray-400">Recipient Address</Label>
-            <Input
-              value={usdcRecipient}
-              onChangeText={setUsdcRecipient}
-              placeholder="Enter Solana address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              className="bg-gray-800 border-gray-700 text-white"
-            />
+              <View style={styles.formSection}>
+                {/* Token Selector */}
+                <View style={styles.tokenSelectorRow}>
+                  {[
+                    { value: 'SOL' as const, label: 'SOL', balance: solBalanceText },
+                    { value: 'USDC' as const, label: 'USDC', balance: usdcBalanceText || 'Balance —' },
+                  ].map((item) => {
+                    const active = airdropToken === item.value;
+                    return (
+                      <TouchableOpacity
+                        key={item.value}
+                        onPress={() => {
+                          setAirdropToken(item.value);
+                          setAirdropAmount('1');
+                          setAirdropError(null);
+                          setAirdropSuccess(null);
+                        }}
+                        style={[
+                          styles.tokenButton,
+                          active ? styles.tokenButtonActive : styles.tokenButtonInactive,
+                        ]}
+                      >
+                        <View>
+                          <Text style={styles.tokenLabel}>{item.label}</Text>
+                          <Text style={styles.tokenBalance}>{item.balance}</Text>
+                        </View>
+                        <View style={styles.radioOuter}>
+                          {active && <View style={styles.radioInner} />}
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
           </View>
 
-          <View className="space-y-2">
-            <Label className="text-gray-400">Amount (USDC)</Label>
+                {/* SOL Amount Input */}
+                {airdropToken === 'SOL' && (
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Amount (SOL)</Text>
             <Input
-              value={usdcAmount}
-              onChangeText={setUsdcAmount}
-              placeholder="0.0"
+                      value={airdropAmount}
+                      onChangeText={setAirdropAmount}
+                      placeholder="Enter SOL amount"
               keyboardType="decimal-pad"
-              className="bg-gray-800 border-gray-700 text-white"
-            />
+                      style={styles.amountInput}
+                      {...({} as any)}
+                    />
+                    <Text style={styles.recommendedText}>Recommended: 1-2 SOL</Text>
+                    <View style={styles.quickAmountRow}>
+                      <TouchableOpacity onPress={() => setAirdropAmount('1')} style={styles.quickAmountButton}>
+                        <Text style={styles.quickAmountText}>1 SOL</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => setAirdropAmount('2')} style={styles.quickAmountButton}>
+                        <Text style={styles.quickAmountText}>2 SOL</Text>
+                      </TouchableOpacity>
+                    </View>
           </View>
+                )}
 
-          <Button
-            onPress={handleTransferUSDC}
-            disabled={usdcLoading || !usdcRecipient || !usdcAmount}
-            className="w-full bg-green-600"
+                {/* Request Button */}
+                <TouchableOpacity
+                  onPress={handleAirdrop}
+                  disabled={
+                    network !== 'devnet' ||
+                    airdropLoading ||
+                    (airdropToken === 'SOL' && !airdropAmount) ||
+                    !pubkey
+                  }
+                  style={[
+                    styles.nextButton,
+                    styles.fullWidthButton,
+                    (network !== 'devnet' ||
+                      airdropLoading ||
+                      (airdropToken === 'SOL' && !airdropAmount) ||
+                      !pubkey) &&
+                      styles.buttonDisabled,
+                  ]}
           >
-            <Text>{usdcLoading ? 'Sending...' : 'Send USDC (Gasless)'}</Text>
-          </Button>
+                  <Text style={styles.nextButtonText}>
+                    {airdropLoading
+                      ? 'Requesting...'
+                      : airdropToken === 'SOL'
+                      ? 'Request Airdrop'
+                      : 'Open Circle Faucet'}
+                  </Text>
+                </TouchableOpacity>
 
-          {usdcError && (
-            <Alert variant="destructive" icon={AlertCircle} className="bg-red-900/50 border-red-500">
-              <AlertDescription className="text-red-200 text-sm">
-                {usdcError}
-              </AlertDescription>
-            </Alert>
+                {/* Error */}
+                {airdropError && (
+                  <View style={styles.errorAlert}>
+                    <View style={styles.errorRow}>
+                      <AlertCircle size={16} color="#FCA5A5" />
+                      <Text style={styles.errorAlertText}>{formatErrorMessage(airdropError)}</Text>
+                    </View>
+                    {airdropToken === 'SOL' && (
+                      <TouchableOpacity
+                        onPress={() => Linking.openURL('https://faucet.solana.com')}
+                        style={styles.exploreLinkRow}
+                      >
+                        <Link2 size={16} color="#9CA3AF" />
+                        <Text style={styles.linkText}>Explore Solana Faucet</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
           )}
 
-          {usdcSuccess && (
-            <Alert icon={CheckCircle2} className="bg-green-900/50 border-green-500">
-              <AlertDescription className="text-green-200 text-sm">
-                {usdcSuccess}
-              </AlertDescription>
-            </Alert>
+                {/* Success */}
+                {airdropSuccess && (
+                  <View style={styles.successAlert}>
+                    <View style={styles.successRow}>
+                      <CheckCircle size={16} color="#86EFAC" />
+                      <Text style={styles.successAlertText}>{airdropSuccess}</Text>
+                    </View>
+                  </View>
           )}
 
-          <Alert icon={Info} className="bg-blue-900/30 border-blue-500/50">
-            <AlertDescription className="text-blue-200 text-xs">
-              🎉 You saved 0.00005 SOL in gas fees thanks to Lazorkit Paymaster!
-            </AlertDescription>
-          </Alert>
+                {/* Info */}
+                <View style={styles.infoBox}>
+                  <View style={styles.infoRow}>
+                    <Info size={16} color="#9CA3AF" />
+                    <Text style={styles.infoText}>
+                      {airdropToken === 'SOL'
+                        ? 'SOL airdrop requests tokens directly from Solana devnet faucet. Tokens will arrive in a few seconds.'
+                        : 'USDC airdrop opens Circle Faucet website. You can request 1 USDC every 2 hours per address.'}
+                    </Text>
+                  </View>
+                  {airdropToken === 'SOL' && (
+                    <TouchableOpacity
+                      onPress={() => Linking.openURL('https://faucet.solana.com')}
+                      style={styles.exploreLinkRow}
+                    >
+                      <Link2 size={16} color="#9CA3AF" />
+                      <Text style={styles.linkText}>Explore Solana Faucet</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
         </CardContent>
       </Card>
+        </View>
+      ),
+    },
+  ];
+
+  return (
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+    >
+      <ScrollView 
+        keyboardShouldPersistTaps="handled" 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.header} />
+
+        {/* Wallet Banner */}
+        <View style={styles.bannerContainer}>
+          <WalletBanner
+            walletAddress={pubkey}
+            solBalance={solBalance}
+            usdcBalance={usdcBalance}
+            solBalanceText={solBalanceText}
+            usdcBalanceText={usdcBalanceText}
+            network={network}
+            onExploreClick={() => {
+              const cluster = network === 'devnet' ? '?cluster=devnet' : '';
+              Linking.openURL(`https://explorer.solana.com/address/${pubkey}${cluster}`);
+            }}
+          />
+        </View>
+
+        {/* Tabs */}
+        <View style={styles.tabsContainer}>
+          <Tabs items={tabItems} value={activeTab} onValueChange={setActiveTab} />
+        </View>
+
+        {/* Logout button at bottom */}
+        <View style={styles.logoutContainer}>
+          <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+            <LogOut size={18} color="#DC2626" />
+            <Text style={styles.logoutButtonText}>Logout</Text>
+          </TouchableOpacity>
+        </View>
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -258,11 +620,293 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000000',
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: '#000000',
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    color: '#9CA3AF',
+    fontSize: 16,
+  },
+  scrollContent: {
+    paddingBottom: 20,
+    flexGrow: 1,
+  },
+  header: {
+    height: 60,
+  },
+  bannerContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  tabsContainer: {
+    paddingHorizontal: 20,
+  },
+  tabContent: {
+    gap: 24,
+  },
+  formCard: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 26,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    overflow: 'hidden',
+  },
+  cardContent: {
     padding: 20,
-    paddingTop: 60,
+    gap: 20,
+  },
+  formSection: {
+    gap: 16,
+  },
+  tokenSelectorRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  tokenButton: {
+    flex: 1,
+    minWidth: 140,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  tokenButtonActive: {
+    borderColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  tokenButtonInactive: {
+    borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+  },
+  tokenLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  tokenBalance: {
+    fontSize: 12,
+    color: '#9CA3AF',
+  },
+  radioOuter: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#FFFFFF',
+  },
+  inputGroup: {
+    gap: 8,
+  },
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    color: '#E5E7EB',
+  },
+  inputWithButton: {
+    position: 'relative',
+  },
+  inputField: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    paddingRight: 48,
+    fontSize: 16,
+    color: '#FFFFFF',
+  },
+  pasteButton: {
+    position: 'absolute',
+    right: 12,
+    top: '50%',
+    transform: [{ translateY: -12 }],
+    padding: 4,
+  },
+  amountInput: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    textAlign: 'center',
+  },
+  quickAmountRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 8,
+  },
+  quickAmountButton: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 9999,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  quickAmountText: {
+    color: '#E5E7EB',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  cancelButton: {
+    flex: 1,
+    borderRadius: 9999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelButtonText: {
+    color: '#E5E7EB',
+    fontWeight: '500',
+    fontSize: 16,
+  },
+  nextButton: {
+    flex: 1,
+    borderRadius: 9999,
+    backgroundColor: '#7857ff',
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nextButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  fullWidthButton: {
+    width: '100%',
+  },
+  buttonDisabled: {
+    opacity: 0.5,
+  },
+  errorAlert: {
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    borderWidth: 1,
+    borderColor: '#EF4444',
+    borderRadius: 12,
+    padding: 12,
+  },
+  errorAlertText: {
+    color: '#FCA5A5',
+    fontSize: 14,
+  },
+  errorRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  successAlert: {
+    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+    borderWidth: 1,
+    borderColor: '#22C55E',
+    borderRadius: 12,
+    padding: 12,
+  },
+  successRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  successAlertText: {
+    color: '#86EFAC',
+    fontSize: 14,
+    flex: 1,
+  },
+  linkText: {
+    color: '#9CA3AF',
+    fontSize: 12,
+    textDecorationLine: 'underline',
+  },
+  infoBox: {
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: 16,
+    padding: 12,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  infoText: {
+    color: '#9CA3AF',
+    fontSize: 12,
+    flex: 1,
+  },
+  exploreLinkRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  airdropHeader: {
+    gap: 4,
+    marginBottom: 8,
+  },
+  airdropTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  airdropSubtitle: {
+    fontSize: 14,
+    color: '#CBD5E1',
+  },
+  recommendedText: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    textAlign: 'center',
+  },
+  logoutContainer: {
+    paddingHorizontal: 20,
+    marginTop: 24,
+    marginBottom: 32,
+  },
+  logoutButton: {
+    borderRadius: 9999,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#DC2626',
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  logoutButtonText: {
+    color: '#DC2626',
+    fontWeight: '600',
+    fontSize: 16,
   },
 });
+
+
