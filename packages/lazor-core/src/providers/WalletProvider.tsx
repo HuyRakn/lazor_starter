@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useNetworkStore, type Network } from '../state/networkStore';
+import { LazorkitProvider } from '@lazorkit/wallet';
 
 type Props = {
   children: React.ReactNode;
@@ -32,58 +33,12 @@ export function WalletProvider({ children, rpcUrl, paymasterUrl, ipfsUrl, apiKey
   const network = networkProp || networkStore.network;
   const isDevnet = network === 'devnet';
 
-  const finalRpcUrl =
-    rpcUrl ||
-    (isDevnet
-      ? process.env.NEXT_PUBLIC_LAZORKIT_RPC_URL_DEVNET
-      : process.env.NEXT_PUBLIC_LAZORKIT_RPC_URL) ||
-    '';
-
-  const finalPaymasterUrl =
-    paymasterUrl ||
-    (isDevnet
-      ? process.env.NEXT_PUBLIC_LAZORKIT_PAYMASTER_URL_DEVNET
-      : process.env.NEXT_PUBLIC_LAZORKIT_PAYMASTER_URL) ||
-    undefined;
-
-  const finalIpfsUrl =
-    ipfsUrl ||
-    (isDevnet
-      ? process.env.NEXT_PUBLIC_LAZORKIT_PORTAL_URL_DEVNET
-      : process.env.NEXT_PUBLIC_LAZORKIT_PORTAL_URL) ||
-    undefined;
-
-  const finalApiKey =
-    apiKey !== undefined
-      ? apiKey
-      : isDevnet
-        ? ''
-        : process.env.NEXT_PUBLIC_LAZORKIT_API_KEY || '';
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    if (finalRpcUrl && finalPaymasterUrl && finalIpfsUrl) {
-      import('@lazorkit/wallet').then((module) => {
-        const { useWalletStore } = module;
-        const store = (useWalletStore as any).getState?.() || useWalletStore;
-        if (store && typeof store.setConfig === 'function') {
-          store.setConfig({
-            rpcUrl: finalRpcUrl,
-            paymasterConfig: {
-              paymasterUrl: finalPaymasterUrl,
-              apiKey: finalApiKey,
-            },
-            portalUrl: finalIpfsUrl,
-          });
-        }
-      }).catch((error) => {
-        console.warn('Failed to configure wallet store:', error);
-      });
-    }
-  }, [finalRpcUrl, finalPaymasterUrl, finalIpfsUrl, finalApiKey]);
+  // Use props directly - WalletProviderWrapper should pass all required values
+  // Don't fallback to process.env here as it may not be available in shared packages
+  const finalRpcUrl = rpcUrl || '';
+  const finalPaymasterUrl = paymasterUrl || undefined;
+  const finalIpfsUrl = ipfsUrl || undefined;
+  const finalApiKey = apiKey !== undefined ? apiKey : (isDevnet ? '' : '');
 
   if (!finalRpcUrl || !finalPaymasterUrl || !finalIpfsUrl) {
     console.warn(
@@ -101,7 +56,19 @@ export function WalletProvider({ children, rpcUrl, paymasterUrl, ipfsUrl, apiKey
     console.warn('WalletProvider: Paymaster API key is missing. Gasless may fail.');
   }
 
-  return <>{children}</>;
+  // Wrap with LazorkitProvider from @lazorkit/wallet (direct import, no dynamic loading)
+  return (
+    <LazorkitProvider
+      rpcUrl={finalRpcUrl}
+      portalUrl={finalIpfsUrl}
+      paymasterConfig={{
+        paymasterUrl: finalPaymasterUrl,
+        apiKey: finalApiKey,
+      }}
+    >
+      {children}
+    </LazorkitProvider>
+  );
 }
 
 export default WalletProvider;

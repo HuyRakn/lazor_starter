@@ -24,8 +24,14 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               (function(){
-                if (typeof window !== 'undefined' && !window.global) { 
-                  window.global = window; 
+                // CRITICAL: Set global polyfill FIRST before any other code runs
+                if (typeof window !== 'undefined') {
+                  if (typeof window.global === 'undefined') {
+                    window.global = window;
+                  }
+                  if (typeof globalThis !== 'undefined' && typeof globalThis.global === 'undefined') {
+                    globalThis.global = globalThis;
+                  }
                 }
                 
                 // Suppress retry delay console logs
@@ -67,7 +73,7 @@ export default function RootLayout({
           }}
         />
         <WalletProviderWrapper>
-          {children}
+          <main>{children}</main>
         </WalletProviderWrapper>
       </body>
     </html>

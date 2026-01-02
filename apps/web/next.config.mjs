@@ -1,8 +1,11 @@
 /** @type {import('next').NextConfig} */
 import { createRequire } from 'module';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
 const require = createRequire(import.meta.url);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const nextConfig = {
   reactStrictMode: true,
@@ -82,12 +85,28 @@ const nextConfig = {
         crypto: require.resolve('crypto-browserify'),
       };
       
-      // Provide buffer as global for browser
+      // Provide buffer and global as globals for browser
       config.plugins.push(
         new webpack.ProvidePlugin({
           Buffer: ['buffer', 'Buffer'],
+          // Provide global as window/globalThis for browser
+          global: [path.join(__dirname, 'polyfills-global.js'), 'global'],
         })
       );
+      
+      // Inject global polyfill into all modules
+      const originalEntry = config.entry;
+      config.entry = async () => {
+        const entries = await originalEntry();
+        // Add polyfill entry for client-side only
+        if (entries['main.js'] && !entries['main.js'].includes) {
+          entries['main.js'] = [
+            path.join(__dirname, 'polyfills.js'),
+            ...(Array.isArray(entries['main.js']) ? entries['main.js'] : [entries['main.js']]),
+          ];
+        }
+        return entries;
+      };
     } else {
       // Server-side: allow native modules but still fallback
       config.resolve.fallback = {

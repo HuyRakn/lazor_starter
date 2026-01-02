@@ -2,26 +2,21 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@lazor-starter/core';
 
-/**
- * Home page - redirects to dashboard
- *
- * All login functionality is now in dashboard page.
- */
 export default function HomePage() {
   const router = useRouter();
-  const { isInitialized } = useAuth();
 
   useEffect(() => {
-    if (isInitialized) {
+    // Redirect to dashboard immediately
       router.replace('/dashboard');
-    }
-  }, [isInitialized, router]);
+  }, [router]);
 
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black">
-        <p className="text-gray-400">Loading...</p>
+    <div className="min-h-screen bg-[#050505] text-white flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
+        <p className="text-gray-400">Redirecting to dashboard...</p>
+      </div>
     </div>
   );
 }

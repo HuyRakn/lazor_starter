@@ -34,6 +34,25 @@ Building Web3 applications shouldn't require wrestling with complex configuratio
 | **Cross-Platform** | Separate codebases | Shared code (monorepo) ✅ |
 | **Mobile Support** | Limited | Full native support ✅ |
 
+## 📚 Documentation & Guides
+
+Comprehensive documentation for all features:
+
+| Guide | Description | Difficulty | Documentation |
+|-------|-------------|------------|---------------|
+| [01: Passkey Wallet Basics](./docs/01-passkey-wallet-basics.md) | Create wallets with Face ID, check balances | ⭐ Beginner | [Read Guide](./docs/01-passkey-wallet-basics.md) |
+| [02: Gasless Transfer](./docs/02-gasless-transfer.md) | Send tokens without paying gas fees | ⭐⭐ Intermediate | [Read Guide](./docs/02-gasless-transfer.md) |
+| [03: Jupiter Swap](./docs/03-jupiter-swap.md) | DEX token swaps without gas fees | ⭐⭐⭐ Advanced | [Read Guide](./docs/03-jupiter-swap.md) |
+| [04: NFT Minting](./docs/04-nft-minting.md) | Mint standard NFTs with Metaplex | ⭐⭐⭐ Advanced | [Read Guide](./docs/04-nft-minting.md) |
+| [05: Compressed NFT](./docs/05-compressed-nft.md) | Mint compressed NFTs (truly gasless!) | ⭐⭐⭐ Advanced | [Read Guide](./docs/05-compressed-nft.md) |
+
+### Additional Tutorials
+
+- [Tutorial 1: Setup and Configuration](./docs/tutorial-1-setup-and-configuration.md)
+- [Tutorial 2: Passkey Authentication](./docs/tutorial-2-passkey-authentication.md)
+- [Tutorial 3: Gasless Transactions](./docs/tutorial-3-gasless-transactions.md)
+- [Tutorial 4: Advanced Features](./docs/tutorial-4-advanced-features.md)
+
 ## 🏗️ Architecture
 
 ```
@@ -165,7 +184,17 @@ Scan the QR code with **Expo Go** app, or press:
 
 ## 📚 Documentation
 
-Comprehensive tutorials for both Web and Mobile:
+### Interactive Recipes (Web App)
+
+Visit the recipes page to see live examples with step-by-step tutorials:
+
+- **[Recipe 01: Passkey Wallet Basics](./apps/web/app/recipes/01-passkey-wallet-basics/README.md)** - Create wallets with Face ID, check balances, request airdrops
+- **[Recipe 02: Gasless USDC Transfer](./apps/web/app/recipes/02-gasless-transfer/README.md)** - Send tokens without paying gas fees
+- **[Recipe 03: Gasless Jupiter Swap](./apps/web/app/recipes/03-jupiter-swap/README.md)** - Swap tokens on Jupiter DEX without gas
+- **[Recipe 04: NFT Minting](./apps/web/app/recipes/04-nft-minting/README.md)** - Mint standard NFTs with Metaplex Token Metadata
+- **[Recipe 05: Compressed NFTs](./apps/web/app/recipes/05-compressed-nft/README.md)** - Mint compressed NFTs with Bubblegum (truly gasless!)
+
+### Additional Documentation
 
 - **[Tutorial 1: Setup and Configuration](./docs/tutorial-1-setup-and-configuration.md)** - Environment setup, provider configuration, polyfills
 - **[Tutorial 2: Passkey Authentication](./docs/tutorial-2-passkey-authentication.md)** - Implementing Face ID / Touch ID login
@@ -179,6 +208,17 @@ Comprehensive tutorials for both Web and Mobile:
 Shared logic for both Web and Mobile platforms:
 
 #### Hooks
+
+- **`useSmartWallet`** - Universal Smart Wallet hook (Web + Mobile)
+  ```tsx
+  const { wallet, connect, disconnect, isConnected, signAndSendTransaction } = useSmartWallet();
+  ```
+
+- **`useJupiterSwap`** - Jupiter DEX swap integration
+  ```tsx
+  const { executeSwap, getQuote, loading } = useJupiterSwap();
+  const signature = await executeSwap({ inputMint, outputMint, amount, slippageBps });
+  ```
 
 - **`useAuth`** - Passkey authentication (login, logout, registration)
   ```tsx
@@ -214,6 +254,8 @@ Shared logic for both Web and Mobile platforms:
 
 #### Utilities
 
+- **Solana**: `getConnection()`, `getBalances()`, `formatTransactionError()`, `withRetry()` - Solana operations
+- **NFT**: `validateNftMetadata()`, `generateMintId()`, `addSmartWalletToInstructions()` - NFT utilities
 - **Storage**: `getStorage()`, `initMobileStorage()` - Cross-platform storage
 - **Formatting**: `formatAddress()`, `formatBalance()` - Display helpers
 - **Validation**: `validateAddress()`, `isValidPublicKey()` - Address validation

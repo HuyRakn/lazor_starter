@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Connection, PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { getAssociatedTokenAddress, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { useNetworkStore } from '../state/networkStore';
+import { getConnection } from '../utils/solana';
 
 /**
  * Hook to fetch wallet balances (SOL and USDC) from onchain
@@ -48,29 +49,8 @@ export function useWalletBalance(
           return;
         }
 
-        const network = useNetworkStore.getState().network;
-        
-        // Get RPC URL: check explicit param, then mobile globals, then process.env
-        let resolvedRpcUrl = rpcUrl;
-        if (!resolvedRpcUrl) {
-          if (network === 'devnet') {
-            resolvedRpcUrl =
-              (global as any).__LAZOR_MOBILE_RPC_URL_DEV__ ||
-              process.env.NEXT_PUBLIC_LAZORKIT_RPC_URL_DEVNET ||
-              '';
-          } else {
-            resolvedRpcUrl =
-              (global as any).__LAZOR_MOBILE_RPC_URL_MAIN__ ||
-              process.env.NEXT_PUBLIC_LAZORKIT_RPC_URL ||
-              '';
-          }
-        }
-
-        if (!resolvedRpcUrl) {
-          throw new Error('Missing Lazorkit RPC URL. Set NEXT_PUBLIC_LAZORKIT_RPC_URL or NEXT_PUBLIC_LAZORKIT_RPC_URL_DEVNET.');
-        }
-
-        const connection = new Connection(resolvedRpcUrl);
+        // Use getConnection utility which handles RPC URL resolution and caching
+        const connection = getConnection(rpcUrl);
 
         const publicKey = new PublicKey(walletAddress);
 
