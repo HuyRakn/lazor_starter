@@ -146,6 +146,7 @@ export default function DashboardPage() {
   const [swapQuote, setSwapQuote] = useState<any>(null);
   const [swapLoadingQuote, setSwapLoadingQuote] = useState(false);
   const [swapSignature, setSwapSignature] = useState<string | null>(null);
+  const [swapMessage, setSwapMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Local images for 3D Marquee from public/images
   const marqueeImageList = [
@@ -1092,10 +1093,11 @@ export default function DashboardPage() {
                 <Button
                   onClick={async () => {
                     if (!swapAmount || parseFloat(swapAmount) <= 0) {
-                      alert('Please enter a valid amount');
+                      setSwapMessage({ type: 'error', text: 'Please enter a valid amount' });
                       return;
                     }
                     setSwapLoadingQuote(true);
+                    setSwapMessage(null);
                     try {
                       const quote = await getQuote({
                         inputMint: swapInputMint,
@@ -1104,9 +1106,10 @@ export default function DashboardPage() {
                         slippageBps: swapSlippage,
                       });
                       setSwapQuote(quote);
+                      setSwapMessage({ type: 'success', text: 'Quote retrieved successfully' });
                     } catch (err) {
                       console.error('Get Quote error:', err);
-                      alert(formatTransactionError(err, 'Get Quote') || 'Failed to get quote. Please try again.');
+                      setSwapMessage({ type: 'error', text: formatTransactionError(err, 'Get Quote') || 'Failed to get quote. Please try again.' });
                     } finally {
                       setSwapLoadingQuote(false);
                     }
@@ -1120,9 +1123,10 @@ export default function DashboardPage() {
                 <Button
                   onClick={async () => {
                     if (!swapAmount || parseFloat(swapAmount) <= 0) {
-                      alert('Please enter a valid amount');
+                      setSwapMessage({ type: 'error', text: 'Please enter a valid amount' });
                       return;
                     }
+                    setSwapMessage(null);
                     try {
                       const signature = await executeSwap({
                         inputMint: swapInputMint,
@@ -1131,12 +1135,12 @@ export default function DashboardPage() {
                         slippageBps: swapSlippage,
                       });
                       setSwapSignature(signature);
-                      alert(`✅ Swap successful!\n\nTransaction: ${signature.slice(0, 20)}...`);
+                      setSwapMessage({ type: 'success', text: `Swap successful! Transaction: ${signature.slice(0, 20)}...` });
                       setSwapAmount('');
                       setSwapQuote(null);
                     } catch (err) {
                       console.error('Swap error:', err);
-                      alert(formatTransactionError(err, 'Swap') || 'Swap failed. Please try again.');
+                      setSwapMessage({ type: 'error', text: formatTransactionError(err, 'Swap') || 'Swap failed. Please try again.' });
                     }
                   }}
                   disabled={swapLoading || !swapAmount}
@@ -1146,7 +1150,14 @@ export default function DashboardPage() {
                 </Button>
               </div>
 
-              {swapError && (
+              {swapMessage && (
+                <Alert variant={swapMessage.type === 'error' ? 'destructive' : 'default'} className="mt-2">
+                  <AlertDescription className={swapMessage.type === 'error' ? 'text-red-200 text-sm' : 'text-green-200 text-sm'}>
+                    {swapMessage.text}
+                  </AlertDescription>
+                </Alert>
+              )}
+              {swapError && !swapMessage && (
                 <Alert variant="destructive" className="mt-2">
                   <AlertDescription className="text-red-200 text-sm">
                     {formatTransactionError(swapError, 'Swap')}
