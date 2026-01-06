@@ -1451,7 +1451,6 @@ export default function DashboardPage() {
                     <div className="absolute inset-0 bg-gradient-to-br from-pink-500/20 to-purple-500/20" />
                 <div className="relative z-10 flex h-full items-center justify-center">
                       <div className="text-center">
-                        <div className="text-4xl mb-2">🎨</div>
                         <span className="text-white font-semibold text-lg lg:text-xl">NFT Minting</span>
                       </div>
                 </div>

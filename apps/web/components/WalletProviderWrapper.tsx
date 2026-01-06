@@ -13,8 +13,8 @@ if (typeof window !== 'undefined') {
     (globalThis as any).global = globalThis;
   }
 
-  // Lazorkit React SDK polyfills – required on web
-  // Docs: https://portal.lazor.sh/docs/react/getting-started#polyfills--configuration
+// Lazorkit React SDK polyfills – required on web
+// Docs: https://portal.lazor.sh/docs/react/getting-started#polyfills--configuration
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { Buffer } = require('buffer');
 
@@ -49,15 +49,15 @@ export function WalletProviderWrapper({ children }: { children: React.ReactNode 
 
   // Get env vars - Next.js injects NEXT_PUBLIC_* vars at build time
   const rpcUrl = isDevnet
-    ? process.env.NEXT_PUBLIC_LAZORKIT_RPC_URL_DEVNET
+          ? process.env.NEXT_PUBLIC_LAZORKIT_RPC_URL_DEVNET
     : process.env.NEXT_PUBLIC_LAZORKIT_RPC_URL;
   
   const paymasterUrl = isDevnet
-    ? process.env.NEXT_PUBLIC_LAZORKIT_PAYMASTER_URL_DEVNET
+          ? process.env.NEXT_PUBLIC_LAZORKIT_PAYMASTER_URL_DEVNET
     : process.env.NEXT_PUBLIC_LAZORKIT_PAYMASTER_URL;
   
   const portalUrl = isDevnet
-    ? process.env.NEXT_PUBLIC_LAZORKIT_PORTAL_URL_DEVNET
+          ? process.env.NEXT_PUBLIC_LAZORKIT_PORTAL_URL_DEVNET
     : process.env.NEXT_PUBLIC_LAZORKIT_PORTAL_URL;
   
   const apiKey = isDevnet ? '' : process.env.NEXT_PUBLIC_LAZORKIT_API_KEY;
