@@ -7,7 +7,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { Copy, LogOut, Info, Link2, AlertCircle, CheckCircle } from 'lucide-react-native';
+import { Copy, LogOut, Info, Link2, AlertCircle, CheckCircle, ArrowRightLeft, Image as ImageIcon, Database } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import {
   useWalletBalance,
@@ -30,11 +30,22 @@ import {
 import { useState, useMemo, useEffect } from 'react';
 import * as Clipboard from 'expo-clipboard';
 
+// Feature Components
+import { SwapFeature } from '../src/features/SwapFeature';
+import { NftMintFeature } from '../src/features/NftMintFeature';
+
+import { CNftMintFeature } from '../src/features/CNftMintFeature';
+import { CodeExample } from '../src/components/CodeExample';
+import { codeExamples } from '../src/data/codeExamples';
+
+type DashboardView = 'home' | 'swap' | 'nft' | 'cnft';
+
 /**
  * Dashboard screen component for mobile app
  *
  * Displays wallet information, transfer, and airdrop functionality.
  * Uses tabs for Transfer and Airdrop sections.
+ * Refactored to include sub-features (Swap, NFT, cNFT) within the same view.
  *
  * @returns Dashboard screen component
  */
@@ -44,6 +55,9 @@ export default function DashboardScreen() {
   const { transferSOL, transferSPLToken } = useMobileGaslessTx();
   const { requestSOLAirdrop, requestUSDCAirdrop, loading: airdropLoading } = useAirdrop();
   const { network, setNetwork } = useNetworkStore();
+
+  // Navigation State
+  const [activeView, setActiveView] = useState<DashboardView>('home');
 
   // Select correct USDC mint by network
   const usdcMintAddress = useMemo(
@@ -74,14 +88,14 @@ export default function DashboardScreen() {
   const [airdropToken, setAirdropToken] = useState<'SOL' | 'USDC'>('SOL');
   const [airdropError, setAirdropError] = useState<string | null>(null);
   const [airdropSuccess, setAirdropSuccess] = useState<string | null>(null);
-  
+
   // Tab state
   const [activeTab, setActiveTab] = useState<string>('transfer');
 
   // Redirect to home if not logged in
   useEffect(() => {
     if (isInitialized && (!isLoggedIn || !pubkey)) {
-    router.replace('/');
+      router.replace('/');
     }
   }, [isInitialized, isLoggedIn, pubkey, router]);
 
@@ -269,7 +283,7 @@ export default function DashboardScreen() {
                     { value: 'USDC' as const, label: 'USDC', balance: usdcBalanceText || 'Balance —' },
                   ].map((item) => {
                     const active = transferToken === item.value;
-  return (
+                    return (
                       <TouchableOpacity
                         key={item.value}
                         onPress={() => {
@@ -291,39 +305,39 @@ export default function DashboardScreen() {
                         </View>
                         <View style={styles.radioOuter}>
                           {active && <View style={styles.radioInner} />}
-        </View>
+                        </View>
                       </TouchableOpacity>
                     );
                   })}
-      </View>
+                </View>
 
                 {/* Recipient Address */}
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>Recipient Address</Text>
                   <View style={styles.inputWithButton}>
-            <Input
+                    <Input
                       value={transferRecipient}
                       onChangeText={setTransferRecipient}
                       placeholder="Enter recipient address"
-              autoCapitalize="none"
-              autoCorrect={false}
+                      autoCapitalize="none"
+                      autoCorrect={false}
                       style={styles.inputField}
                       {...({} as any)}
-            />
+                    />
                     <TouchableOpacity onPress={handlePasteAddress} style={styles.pasteButton}>
                       <Copy size={16} color="#9CA3AF" />
                     </TouchableOpacity>
                   </View>
-          </View>
+                </View>
 
                 {/* Amount */}
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>Amount ({transferToken})</Text>
-            <Input
+                  <Input
                     value={transferAmount}
                     onChangeText={setTransferAmount}
                     placeholder="Enter Amount"
-              keyboardType="decimal-pad"
+                    keyboardType="decimal-pad"
                     style={styles.amountInput}
                     {...({} as any)}
                   />
@@ -349,7 +363,7 @@ export default function DashboardScreen() {
                     </TouchableOpacity>
                   </View>
                 </View>
-          </View>
+              </View>
 
               {/* Actions */}
               <View style={styles.actionRow}>
@@ -363,7 +377,7 @@ export default function DashboardScreen() {
                     styles.nextButton,
                     (transferLoading || !transferRecipient || !transferAmount) && styles.buttonDisabled,
                   ]}
-          >
+                >
                   <Text style={styles.nextButtonText}>{transferLoading ? 'Sending...' : 'Next →'}</Text>
                 </TouchableOpacity>
               </View>
@@ -376,7 +390,7 @@ export default function DashboardScreen() {
                     <Text style={styles.errorAlertText}>{formatErrorMessage(transferError)}</Text>
                   </View>
                 </View>
-          )}
+              )}
 
               {/* Success */}
               {transferSuccess && (
@@ -395,7 +409,7 @@ export default function DashboardScreen() {
                     >
                       <Text style={styles.linkText}>View on Solscan →</Text>
                     </TouchableOpacity>
-          )}
+                  )}
                 </View>
               )}
 
@@ -408,8 +422,9 @@ export default function DashboardScreen() {
                   </Text>
                 </View>
               </View>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+
         </View>
       ),
     },
@@ -458,17 +473,17 @@ export default function DashboardScreen() {
                       </TouchableOpacity>
                     );
                   })}
-          </View>
+                </View>
 
                 {/* SOL Amount Input */}
                 {airdropToken === 'SOL' && (
                   <View style={styles.inputGroup}>
                     <Text style={styles.inputLabel}>Amount (SOL)</Text>
-            <Input
+                    <Input
                       value={airdropAmount}
                       onChangeText={setAirdropAmount}
                       placeholder="Enter SOL amount"
-              keyboardType="decimal-pad"
+                      keyboardType="decimal-pad"
                       style={styles.amountInput}
                       {...({} as any)}
                     />
@@ -481,7 +496,7 @@ export default function DashboardScreen() {
                         <Text style={styles.quickAmountText}>2 SOL</Text>
                       </TouchableOpacity>
                     </View>
-          </View>
+                  </View>
                 )}
 
                 {/* Request Button */}
@@ -500,15 +515,15 @@ export default function DashboardScreen() {
                       airdropLoading ||
                       (airdropToken === 'SOL' && !airdropAmount) ||
                       !pubkey) &&
-                      styles.buttonDisabled,
+                    styles.buttonDisabled,
                   ]}
-          >
+                >
                   <Text style={styles.nextButtonText}>
                     {airdropLoading
                       ? 'Requesting...'
                       : airdropToken === 'SOL'
-                      ? 'Request Airdrop'
-                      : 'Open Circle Faucet'}
+                        ? 'Request Airdrop'
+                        : 'Open Circle Faucet'}
                   </Text>
                 </TouchableOpacity>
 
@@ -529,7 +544,7 @@ export default function DashboardScreen() {
                       </TouchableOpacity>
                     )}
                   </View>
-          )}
+                )}
 
                 {/* Success */}
                 {airdropSuccess && (
@@ -539,7 +554,7 @@ export default function DashboardScreen() {
                       <Text style={styles.successAlertText}>{airdropSuccess}</Text>
                     </View>
                   </View>
-          )}
+                )}
 
                 {/* Info */}
                 <View style={styles.infoBox}>
@@ -562,8 +577,9 @@ export default function DashboardScreen() {
                   )}
                 </View>
               </View>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+
         </View>
       ),
     },
@@ -575,14 +591,14 @@ export default function DashboardScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
     >
-      <ScrollView 
-        keyboardShouldPersistTaps="handled" 
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header} />
 
-        {/* Wallet Banner */}
+        {/* Wallet Banner - Always visible */}
         <View style={styles.bannerContainer}>
           <WalletBanner
             walletAddress={pubkey}
@@ -598,19 +614,68 @@ export default function DashboardScreen() {
           />
         </View>
 
-        {/* Tabs */}
-        <View style={styles.tabsContainer}>
-          <Tabs items={tabItems} value={activeTab} onValueChange={setActiveTab} />
-        </View>
+        {activeView === 'home' ? (
+          <>
+            {/* Quick Actions */}
+            <View style={styles.quickActionsContainer}>
+              <Text style={styles.sectionTitle}>Quick Actions</Text>
+              <View style={styles.actionsRow}>
+                <TouchableOpacity onPress={() => setActiveView('swap')} style={styles.actionCard}>
+                  <View style={[styles.actionIcon, { backgroundColor: 'rgba(120, 87, 255, 0.2)' }]}>
+                    <ArrowRightLeft size={24} color="#7857ff" />
+                  </View>
+                  <Text style={styles.actionLabel}>Swap</Text>
+                </TouchableOpacity>
 
-        {/* Logout button at bottom */}
-        <View style={styles.logoutContainer}>
-          <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-            <LogOut size={18} color="#DC2626" />
-            <Text style={styles.logoutButtonText}>Logout</Text>
-          </TouchableOpacity>
-        </View>
-    </ScrollView>
+                <TouchableOpacity onPress={() => setActiveView('nft')} style={styles.actionCard}>
+                  <View style={[styles.actionIcon, { backgroundColor: 'rgba(236, 72, 153, 0.2)' }]}>
+                    <ImageIcon size={24} color="#EC4899" />
+                  </View>
+                  <Text style={styles.actionLabel}>Mint NFT</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity onPress={() => setActiveView('cnft')} style={styles.actionCard}>
+                  <View style={[styles.actionIcon, { backgroundColor: 'rgba(16, 185, 129, 0.2)' }]}>
+                    <Database size={24} color="#10B981" />
+                  </View>
+                  <Text style={styles.actionLabel}>Mint cNFT</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Tabs */}
+            <View style={styles.tabsContainer}>
+              <Tabs items={tabItems} value={activeTab} onValueChange={setActiveTab} />
+            </View>
+
+            {/* Logout button */}
+            <View style={styles.logoutContainer}>
+              <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+                <LogOut size={18} color="#FFFFFF" />
+                <Text style={styles.logoutButtonText}>Logout</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Code Example Area */}
+            {activeTab && (activeTab === 'transfer' || activeTab === 'airdrop') && (
+              <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
+                <CodeExample
+                  title={activeTab === 'transfer' ? codeExamples.transfer.title : codeExamples.airdrop.title}
+                  description={activeTab === 'transfer' ? codeExamples.transfer.description : codeExamples.airdrop.description}
+                  code={activeTab === 'transfer' ? codeExamples.transfer.code : codeExamples.airdrop.code}
+                />
+              </View>
+            )}
+          </>
+        ) : (
+          <View style={styles.featureContainer}>
+            {activeView === 'swap' && <SwapFeature onBack={() => setActiveView('home')} />}
+            {activeView === 'nft' && <NftMintFeature onBack={() => setActiveView('home')} />}
+            {activeView === 'cnft' && <CNftMintFeature onBack={() => setActiveView('home')} />}
+          </View>
+        )}
+
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -641,7 +706,49 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 24,
   },
+  quickActionsContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    color: '#FFF',
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  actionCard: {
+    flex: 1, // Ensure equal width
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  actionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionLabel: {
+    color: '#D1D5DB',
+    fontSize: 12, // Reduced font slightly to fit
+    fontWeight: '500',
+    textAlign: 'center',
+  },
   tabsContainer: {
+    paddingHorizontal: 20,
+  },
+  featureContainer: {
     paddingHorizontal: 20,
   },
   tabContent: {
@@ -735,8 +842,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 12,
     top: '50%',
-    transform: [{ translateY: -12 }],
-    padding: 4,
+    marginTop: -8, // Half of icon size
   },
   amountInput: {
     backgroundColor: 'rgba(255,255,255,0.05)',
@@ -745,168 +851,154 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    fontSize: 24,
-    fontWeight: '600',
+    fontSize: 16,
     color: '#FFFFFF',
-    textAlign: 'center',
   },
   quickAmountRow: {
     flexDirection: 'row',
-    justifyContent: 'center',
     gap: 8,
-    marginTop: 8,
+    marginTop: 4,
   },
   quickAmountButton: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 9999,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
   },
   quickAmountText: {
-    color: '#E5E7EB',
-    fontSize: 14,
-    fontWeight: '500',
+    color: '#D1D5DB',
+    fontSize: 12,
   },
   actionRow: {
     flexDirection: 'row',
     gap: 12,
+    marginTop: 8,
   },
   cancelButton: {
     flex: 1,
-    borderRadius: 9999,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    height: 48,
+    borderRadius: 14,
     backgroundColor: 'rgba(255,255,255,0.05)',
-    paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cancelButtonText: {
-    color: '#E5E7EB',
-    fontWeight: '500',
+    color: '#FFF',
     fontSize: 16,
+    fontWeight: '600',
   },
   nextButton: {
-    flex: 1,
-    borderRadius: 9999,
+    flex: 2,
+    height: 48,
+    borderRadius: 14,
     backgroundColor: '#7857ff',
-    paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  nextButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 16,
-  },
   fullWidthButton: {
-    width: '100%',
+    flex: 1,
+  },
+  nextButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   buttonDisabled: {
     opacity: 0.5,
   },
   errorAlert: {
-    backgroundColor: 'rgba(239, 68, 68, 0.2)',
-    borderWidth: 1,
-    borderColor: '#EF4444',
+    backgroundColor: 'rgba(239,68,68,0.1)',
     borderRadius: 12,
     padding: 12,
   },
-  errorAlertText: {
-    color: '#FCA5A5',
-    fontSize: 14,
-  },
   errorRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: 8,
   },
+  errorAlertText: {
+    color: '#FCA5A5',
+    fontSize: 13,
+    flex: 1,
+  },
   successAlert: {
-    backgroundColor: 'rgba(34, 197, 94, 0.2)',
-    borderWidth: 1,
-    borderColor: '#22C55E',
+    backgroundColor: 'rgba(134,239,172,0.1)',
     borderRadius: 12,
     padding: 12,
   },
   successRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: 8,
   },
   successAlertText: {
     color: '#86EFAC',
-    fontSize: 14,
+    fontSize: 13,
     flex: 1,
-  },
-  linkText: {
-    color: '#9CA3AF',
-    fontSize: 12,
-    textDecorationLine: 'underline',
   },
   infoBox: {
     backgroundColor: 'rgba(255,255,255,0.03)',
-    borderRadius: 16,
+    borderRadius: 12,
     padding: 12,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
   },
   infoRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
     gap: 8,
   },
   infoText: {
     color: '#9CA3AF',
     fontSize: 12,
+    lineHeight: 18,
     flex: 1,
   },
   exploreLinkRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 8,
+    marginLeft: 24,
+  },
+  linkText: {
+    color: '#60A5FA',
+    fontSize: 12,
+    textDecorationLine: 'underline',
   },
   airdropHeader: {
-    gap: 4,
-    marginBottom: 8,
+    marginBottom: 4,
   },
   airdropTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#FFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 4,
   },
   airdropSubtitle: {
+    color: '#9CA3AF',
     fontSize: 14,
-    color: '#CBD5E1',
   },
   recommendedText: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    textAlign: 'center',
+    color: '#6B7280',
+    fontSize: 11,
+    marginTop: 4,
+    marginLeft: 4,
   },
   logoutContainer: {
-    paddingHorizontal: 20,
-    marginTop: 24,
-    marginBottom: 32,
+    padding: 20,
+    alignItems: 'center',
   },
   logoutButton: {
-    borderRadius: 9999,
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: '#DC2626',
-    paddingVertical: 14,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     gap: 8,
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: '#DC2626',
+    width: '100%',
+    justifyContent: 'center',
   },
   logoutButtonText: {
-    color: '#DC2626',
-    fontWeight: '600',
+    color: '#FFFFFF',
     fontSize: 16,
+    fontWeight: '600',
   },
 });
-
-

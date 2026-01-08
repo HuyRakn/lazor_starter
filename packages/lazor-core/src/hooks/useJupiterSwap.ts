@@ -50,6 +50,8 @@ export interface UseJupiterSwapReturn {
 
 const JUPITER_API_URL = 'https://lite-api.jup.ag/swap/v1';
 
+import { useNetworkStore } from '../state/networkStore';
+
 /**
  * @param {string} mint - Token mint address
  * @returns {Promise<number>} Token decimals
@@ -83,6 +85,7 @@ async function toRawAmount(amount: number, mint: string): Promise<string> {
 
 export function useJupiterSwap(): UseJupiterSwapReturn {
   const { wallet, isConnected, signAndSendTransaction } = useSmartWallet();
+  const { network } = useNetworkStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [lastSignature, setLastSignature] = useState<string | null>(null);
@@ -94,6 +97,10 @@ export function useJupiterSwap(): UseJupiterSwapReturn {
   const getQuote = useCallback(async (params: SwapParams): Promise<SwapQuote | null> => {
     if (!isConnected || !wallet) {
       throw new Error('Wallet not connected');
+    }
+
+    if (network === 'devnet') {
+      throw new Error('Jupiter Swap is only supported on Solana Mainnet Beta.');
     }
 
     try {
@@ -110,7 +117,7 @@ export function useJupiterSwap(): UseJupiterSwapReturn {
 
       const url = `${JUPITER_API_URL}/quote?${quoteParams}`;
       console.log('Jupiter API Request:', url);
-      
+
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -153,11 +160,11 @@ export function useJupiterSwap(): UseJupiterSwapReturn {
       const error = err instanceof Error ? err : new Error(String(err));
       setError(error);
       console.error('Jupiter getQuote error:', error);
-      
+
       if (error.message?.includes('Failed to fetch') || error.message?.includes('ERR_NAME_NOT_RESOLVED') || error.message?.includes('NetworkError')) {
         throw new Error('Network error: Cannot connect to Jupiter API. Please check your internet connection and try again.');
       }
-      
+
       throw error;
     }
   }, [isConnected, wallet]);
@@ -171,22 +178,26 @@ export function useJupiterSwap(): UseJupiterSwapReturn {
       throw new Error('Wallet not connected');
     }
 
+    if (network === 'devnet') {
+      throw new Error('Jupiter Swap is only supported on Solana Mainnet Beta.');
+    }
+
     setLoading(true);
     setError(null);
 
     try {
       const connection = getConnection();
-      
+
       const quote = await getQuote(params);
       if (!quote) {
         throw new Error('Failed to get swap quote');
       }
-      
+
       const latestBlockhash = await connection.getLatestBlockhash('finalized');
-      
+
       const swapUrl = `${JUPITER_API_URL}/swap`;
       console.log('Jupiter Swap Request:', swapUrl);
-      
+
       const swapResponse = await fetch(swapUrl, {
         method: 'POST',
         headers: {
@@ -238,23 +249,23 @@ export function useJupiterSwap(): UseJupiterSwapReturn {
       }
 
       const swapTransactionBuf = Buffer.from(swapData.swapTransaction, 'base64');
-      
+
       let instructions: any[];
-      
+
       try {
         const versionedTransaction = VersionedTransaction.deserialize(swapTransactionBuf);
         const message = versionedTransaction.message;
         const staticKeys = message.staticAccountKeys;
         const addressTableLookups = message.addressTableLookups || [];
-        
+
         console.log('Jupiter transaction details (Versioned):', {
           staticKeysCount: staticKeys.length,
           addressTableLookupsCount: addressTableLookups.length,
           compiledInstructionsCount: message.compiledInstructions.length,
         });
-        
+
         const allAccountKeys: PublicKey[] = [...staticKeys];
-        
+
         for (const lookup of addressTableLookups) {
           let resolved = false;
           for (let attempt = 0; attempt < 3; attempt++) {
@@ -299,7 +310,7 @@ export function useJupiterSwap(): UseJupiterSwapReturn {
             throw new Error(`Address lookup table not found: ${lookup.accountKey.toBase58()}`);
           }
         }
-        
+
         instructions = message.compiledInstructions
           .map(ix => {
             if (ix.programIdIndex >= allAccountKeys.length) {
@@ -311,7 +322,7 @@ export function useJupiterSwap(): UseJupiterSwapReturn {
               });
               return null;
             }
-            
+
             const programId = allAccountKeys[ix.programIdIndex];
             const keys = ix.accountKeyIndexes
               .map(keyIndex => {
@@ -324,20 +335,20 @@ export function useJupiterSwap(): UseJupiterSwapReturn {
                   });
                   return null;
                 }
-                
+
                 const pubkey = allAccountKeys[keyIndex];
                 if (!pubkey) {
                   console.error('Skipping key - Missing pubkey at index:', keyIndex);
                   return null;
                 }
-                
+
                 const isSigner = keyIndex < message.header.numRequiredSignatures;
                 const baseWritableIndex = message.header.numRequiredSignatures - message.header.numReadonlySignedAccounts;
-                const isWritable = 
+                const isWritable =
                   (keyIndex < baseWritableIndex) ||
                   (keyIndex >= message.header.numRequiredSignatures &&
-                   keyIndex < allAccountKeys.length - message.header.numReadonlyUnsignedAccounts);
-                
+                    keyIndex < allAccountKeys.length - message.header.numReadonlyUnsignedAccounts);
+
                 return {
                   pubkey,
                   isSigner,
@@ -345,12 +356,12 @@ export function useJupiterSwap(): UseJupiterSwapReturn {
                 };
               })
               .filter((key): key is { pubkey: PublicKey; isSigner: boolean; isWritable: boolean } => key !== null);
-            
+
             if (keys.length === 0) {
               console.error('Skipping instruction - No valid keys');
               return null;
             }
-            
+
             return {
               programId,
               keys,
@@ -358,11 +369,11 @@ export function useJupiterSwap(): UseJupiterSwapReturn {
             };
           })
           .filter((ix): ix is { programId: PublicKey; keys: Array<{ pubkey: PublicKey; isSigner: boolean; isWritable: boolean }>; data: Buffer } => ix !== null);
-        
+
         if (instructions.length === 0) {
           throw new Error('No valid instructions found after extracting from Jupiter transaction');
         }
-        
+
         console.log('Extracted instructions:', {
           originalCount: message.compiledInstructions.length,
           extractedCount: instructions.length,
@@ -379,7 +390,7 @@ export function useJupiterSwap(): UseJupiterSwapReturn {
           throw new Error(`Failed to parse Jupiter transaction: ${legacyError instanceof Error ? legacyError.message : String(legacyError)}`);
         }
       }
-      
+
       const signature = await signAndSendTransaction({
         instructions,
         transactionOptions: {
@@ -396,11 +407,11 @@ export function useJupiterSwap(): UseJupiterSwapReturn {
       const error = err instanceof Error ? err : new Error(String(err));
       setError(error);
       console.error('Jupiter executeSwap error:', error);
-      
+
       if (error.message?.includes('Failed to fetch') || error.message?.includes('ERR_NAME_NOT_RESOLVED') || error.message?.includes('NetworkError')) {
         throw new Error('Network error: Cannot connect to Jupiter API. Please check your internet connection and try again.');
       }
-      
+
       throw error;
     } finally {
       setLoading(false);

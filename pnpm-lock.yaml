@@ -42,6 +42,21 @@ importers:
       '@lazorkit/wallet-mobile-adapter':
         specifier: ^1.5.1
         version: 1.5.1(@types/react@19.2.7)(expo@54.0.30)(react-native@0.81.5)(react@19.1.0)(typescript@5.9.3)
+      '@metaplex-foundation/mpl-bubblegum':
+        specifier: ^5.0.2
+        version: 5.0.2(@metaplex-foundation/umi@1.4.1)
+      '@metaplex-foundation/mpl-token-metadata':
+        specifier: ^3.4.0
+        version: 3.4.0(@metaplex-foundation/umi@1.4.1)
+      '@metaplex-foundation/umi':
+        specifier: ^1.4.1
+        version: 1.4.1
+      '@metaplex-foundation/umi-bundle-defaults':
+        specifier: ^1.4.1
+        version: 1.4.1(@metaplex-foundation/umi@1.4.1)(@solana/web3.js@1.98.4)
+      '@metaplex-foundation/umi-web3js-adapters':
+        specifier: ^1.4.1
+        version: 1.4.1(@metaplex-foundation/umi@1.4.1)(@solana/web3.js@1.98.4)
       '@react-native-async-storage/async-storage':
         specifier: 2.2.0
         version: 2.2.0(react-native@0.81.5)
@@ -153,6 +168,9 @@ importers:
       tailwind-merge:
         specifier: ^3.4.0
         version: 3.4.0
+      text-encoding:
+        specifier: ^0.7.0
+        version: 0.7.0
       text-encoding-polyfill:
         specifier: ^0.6.7
         version: 0.6.7
@@ -330,13 +348,13 @@ importers:
         specifier: ^3.4.0
         version: 3.4.0(@metaplex-foundation/umi@1.4.1)
       '@metaplex-foundation/umi':
-        specifier: ^1.0.0
+        specifier: ^1.4.1
         version: 1.4.1
       '@metaplex-foundation/umi-bundle-defaults':
-        specifier: ^1.0.0
+        specifier: ^1.4.1
         version: 1.4.1(@metaplex-foundation/umi@1.4.1)(@solana/web3.js@1.98.4)
       '@metaplex-foundation/umi-web3js-adapters':
-        specifier: ^1.0.0
+        specifier: ^1.4.1
         version: 1.4.1(@metaplex-foundation/umi@1.4.1)(@solana/web3.js@1.98.4)
       '@solana/spl-token':
         specifier: ^0.4.14
@@ -362,6 +380,9 @@ importers:
       react:
         specifier: ^18.3.1 || ^19.0.0
         version: 19.1.0
+      text-encoding:
+        specifier: ^0.7.0
+        version: 0.7.0
       zustand:
         specifier: ^5.0.8
         version: 5.0.9(@types/react@19.2.7)(react@19.1.0)
@@ -12789,6 +12810,11 @@ packages:
 
   /text-encoding-utf-8@1.0.2:
     resolution: {integrity: sha512-8bw4MY9WjdsD2aMtO0OzOCY3pXGYNx2d2FfHRVUKkiCPDWjKuOlhLVASS+pD7VkLTVjW268LYJHwsnPFlBpbAg==}
+    dev: false
+
+  /text-encoding@0.7.0:
+    resolution: {integrity: sha512-oJQ3f1hrOnbRLOcwKz0Liq2IcrvDeZRHXhd9RgLrsT+DjWY/nty1Hi7v3dtkaEYbPYe0mUoOfzRrMwfXXwgPUA==}
+    deprecated: no longer maintained
     dev: false
 
   /thenify-all@1.6.0:

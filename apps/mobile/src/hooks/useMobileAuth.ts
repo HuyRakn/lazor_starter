@@ -12,6 +12,7 @@ import Constants from 'expo-constants';
 import { useNetworkStore } from '@lazor-starter/core';
 import { getStorage } from '@lazor-starter/core';
 import type { PasskeyData, WalletState } from '@lazor-starter/core';
+import { Platform } from 'react-native';
 
 const STORAGE_KEYS = {
   PASSKEY_DATA: 'lazorkit-passkey-data',
@@ -33,13 +34,36 @@ function getRedirectUrl(): string {
 }
 
 /**
+ * Get API Base URL
+ */
+const getApiBaseUrl = () => {
+  const configuredUrl = Constants.expoConfig?.extra?.apiBaseUrl ||
+    Constants.manifest?.extra?.apiBaseUrl;
+
+  if (configuredUrl) return configuredUrl;
+
+  if (__DEV__) {
+    if (Constants.expoConfig?.hostUri) {
+      const host = Constants.expoConfig.hostUri.split(':')[0];
+      return `http://${host}:3000`;
+    }
+    if (Platform.OS === 'android') {
+      return 'http://10.0.2.2:3000';
+    }
+  }
+  return 'http://localhost:3000';
+};
+
+/**
  * Mobile authentication hook using React Native SDK
  * 
  * Provides the same API as useAuth but uses @lazorkit/wallet-mobile-adapter
  * with proper redirectUrl handling for deep linking.
  */
 export function useMobileAuth() {
-  const { connect, disconnect, wallet, isConnected } = useWallet();
+  const walletHook = useWallet();
+  const { connect, disconnect, isConnected } = walletHook;
+  const wallet = (walletHook as any).wallet as { smartWallet?: string; credentialId?: string; } | undefined;
   const network = useNetworkStore((state) => state.network);
   const [state, setState] = useState<WalletState>({
     hasPasskey: false,
@@ -61,12 +85,12 @@ export function useMobileAuth() {
         const walletAddressKey = network === 'devnet' ? STORAGE_KEYS.WALLET_ADDRESS_DEVNET : STORAGE_KEYS.WALLET_ADDRESS_MAINNET;
         const hasWalletKey = network === 'devnet' ? STORAGE_KEYS.HAS_WALLET_DEVNET : STORAGE_KEYS.HAS_WALLET_MAINNET;
         const smartWalletIdKey = network === 'devnet' ? STORAGE_KEYS.SMART_WALLET_ID_DEVNET : STORAGE_KEYS.SMART_WALLET_ID_MAINNET;
-        
+
         const hasWalletString = await Promise.resolve(storage.getItem(hasWalletKey));
         const pubkey = await Promise.resolve(storage.getItem(walletAddressKey)) || undefined;
         const smartWalletIdString = await Promise.resolve(storage.getItem(smartWalletIdKey)) || undefined;
         const passkeyDataString = await Promise.resolve(storage.getItem(STORAGE_KEYS.PASSKEY_DATA));
-        
+
         const hasPasskey = hasPasskeyString === 'true';
         const hasWallet = hasWalletString === 'true';
         let passkeyData: PasskeyData | undefined;
@@ -164,9 +188,9 @@ export function useMobileAuth() {
                 JSON.stringify(newState.passkeyData)
               )
             );
-            const smartWalletId = (newState.passkeyData as any)?.smartWalletId || 
-                                 (newState.passkeyData as any)?.walletId || 
-                                 (newState.passkeyData as any)?.smartWalletID;
+            const smartWalletId = (newState.passkeyData as any)?.smartWalletId ||
+              (newState.passkeyData as any)?.walletId ||
+              (newState.passkeyData as any)?.smartWalletID;
             if (smartWalletId) {
               await Promise.resolve(storage.setItem(smartWalletIdKey, String(smartWalletId)));
             } else {
@@ -192,7 +216,7 @@ export function useMobileAuth() {
   const loginWithPasskey = useCallback(async (): Promise<PasskeyData> => {
     try {
       const redirectUrl = getRedirectUrl();
-      
+
       // Connect using mobile adapter with redirectUrl
       const connectedWallet = await connect({
         redirectUrl,
@@ -256,21 +280,20 @@ export function useMobileAuth() {
         const passkeyDataTyped = passkeyData as any;
         const enrichedPasskeyData = storedWalletId
           ? {
-              ...passkeyData,
-              smartWalletId: storedWalletId,
-              walletId: storedWalletId,
-              smartWalletID: storedWalletId,
-            }
+            ...passkeyData,
+            smartWalletId: storedWalletId,
+            walletId: storedWalletId,
+            smartWalletID: storedWalletId,
+          }
           : passkeyData;
 
-        const mobileApiBase = (global as any).__LAZOR_MOBILE_API_BASE__;
-        const apiBase = mobileApiBase || 'http://localhost:3001';
+        const apiBase = (global as any).__LAZOR_MOBILE_API_BASE__ || getApiBaseUrl();
         const apiUrl = `${apiBase}/api/orders/create-smart-wallet`;
-        
+
         const response = await fetch(apiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
+          body: JSON.stringify({
             passkeyData: enrichedPasskeyData,
             network: currentNetwork === 'devnet' ? 'devnet' : 'mainnet',
           }),
